@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../database/localdatabase.dart';
+import '../Database/LocalDatabase.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({Key? key}) : super(key: key);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'NavBar.dart';
+import '../WithMe/Components/CompanionFab.dart';
 
 /// MainScaffold is a reusable widget that provides a consistent layout
 /// for screens in the app, including a NavBar at the top and a Drawer menu.
@@ -75,6 +76,12 @@ class MainScaffold extends StatelessWidget {
 
             // Drawer menu items
             _drawerItem(
+              icon: Icons.favorite,
+              label: 'With Me — AI Companion',
+              context: context,
+              onTap: () => _navigateTo(context, '/with-me/chat'),
+            ),
+            _drawerItem(
               icon: Icons.dashboard,
               label: 'Dashboard',
               context: context,
@@ -116,6 +123,9 @@ class MainScaffold extends StatelessWidget {
 
       // The main body content of the screen
       body: body,
+
+      // Puts the With Me companion within reach of every wrapped screen.
+      floatingActionButton: const CompanionFab(),
     );
   }
 
