@@ -1,8 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:sqflite/sqflite.dart';
 
 import 'Screens/HomeScreen.dart';
 import 'Screens/AboutScreen.dart';
@@ -12,16 +8,17 @@ import 'Screens/LoginScreen.dart';
 import 'Screens/SignUpScreen.dart';
 import 'Screens/FaqScreen.dart';
 import 'Screens/SettingScreen.dart';
+import 'WithMe/Screens/CheckInScreen.dart';
+import 'WithMe/Screens/CompanionChatScreen.dart';
+import 'WithMe/Screens/MascotGalleryScreen.dart';
+import 'WithMe/Screens/WithMeGreetingScreen.dart';
+import 'WithMe/Screens/WithMeWelcomeScreen.dart';
 
 /// Entry point of the Flutter application
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  Directory documentsDirectory = await getApplicationDocumentsDirectory();
-  String path = join(documentsDirectory.path, 'reflections.db');
-  if (await File(path).exists()) {
-    await deleteDatabase(path);
-    print('Old database deleted. A fresh database will be created.');
-  }
+  // The database is no longer wiped on launch — the companion needs its
+  // conversation history and the user's logs to survive a restart.
   runApp(const MyApp()); // Runs the root widget of the app
 }
 
@@ -60,6 +57,13 @@ class MyApp extends StatelessWidget {
         // Placeholder screens for features not implemented yet
         '/membership': (context) =>
             const PlaceholderScreen(title: 'Membership'),
+
+        // --- With Me AI companion -------------------------------------------
+        '/with-me': (context) => const WithMeWelcomeScreen(),
+        '/with-me/greeting': (context) => const WithMeGreetingScreen(),
+        '/with-me/chat': (context) => const CompanionChatScreen(),
+        '/with-me/check-in': (context) => const CheckInScreen(),
+        '/with-me/avatar': (context) => const MascotGalleryScreen(),
       },
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../Components/ActionButton.dart';
+import '../WithMe/Screens/WithMeGreetingScreen.dart';
 import '../Screens/CalendarScreen.dart';
 import '../Screens/CalendarScreenWithCallback.dart';
 import '../Screens/MoodSelectionScreen.dart';
@@ -8,6 +9,15 @@ import '../Screens/SelfReflectionScreen.dart';
 class HomeViewModel {
   List<Widget> getButtons(BuildContext context) {
     return [
+      ActionButton(
+        label: 'Talk to With Me',
+        icon: Icons.favorite,
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const WithMeGreetingScreen()),
+        ),
+      ),
+      const SizedBox(height: 12),
       ActionButton(
         label: 'Dashboard',
         icon: Icons.dashboard,
