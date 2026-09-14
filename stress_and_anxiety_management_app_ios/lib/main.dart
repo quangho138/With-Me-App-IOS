@@ -1,4 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 import 'Screens/HomeScreen.dart';
 import 'Screens/AboutScreen.dart';
@@ -17,6 +20,11 @@ import 'WithMe/Screens/WithMeWelcomeScreen.dart';
 /// Entry point of the Flutter application
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // On web (Chrome) SQLite has no native library, so point the database at
+  // the web implementation. On phones/desktop the default factory is used.
+  if (kIsWeb) {
+    databaseFactory = databaseFactoryFfiWeb;
+  }
   // The database is no longer wiped on launch — the companion needs its
   // conversation history and the user's logs to survive a restart.
   runApp(const MyApp()); // Runs the root widget of the app

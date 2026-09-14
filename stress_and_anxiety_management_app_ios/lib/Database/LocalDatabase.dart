@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
@@ -22,8 +23,15 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    Directory documentsDirectory = await getApplicationDocumentsDirectory();
-    String path = join(documentsDirectory.path, 'reflections.db');
+    String path;
+    if (kIsWeb) {
+      // On web there is no file system. The web database factory stores the
+      // database inside the browser using just this name.
+      path = 'reflections.db';
+    } else {
+      Directory documentsDirectory = await getApplicationDocumentsDirectory();
+      path = join(documentsDirectory.path, 'reflections.db');
+    }
 
     return await openDatabase(
       path,

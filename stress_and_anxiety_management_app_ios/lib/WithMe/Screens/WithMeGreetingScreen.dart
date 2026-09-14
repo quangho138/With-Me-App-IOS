@@ -34,41 +34,54 @@ class _WithMeGreetingScreenState extends State<WithMeGreetingScreen> {
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: WithMeSpace.xl),
-              child: Column(
-                children: [
-                  const SizedBox(height: WithMeSpace.xl),
-                  SpeechBubble(
-                    text: "Hi!\nI'm here with you.\nHow are you feeling today?",
-                    typewriter: true,
-                    onFinished: () {
-                      if (mounted) setState(() => _speaking = false);
-                    },
-                  ),
-                  const Spacer(),
-                  WithMeAvatar(
-                    size: 200,
-                    speaking: _speaking,
-                    expression: _speaking
-                        ? MascotExpression.happy
-                        : MascotExpression.listening,
-                  ),
-                  const SizedBox(height: WithMeSpace.lg),
-                  _TapToTalk(onTap: () => _openChat(context)),
-                  const SizedBox(height: WithMeSpace.md),
-                  Text('Tap to talk', style: WithMeText.body),
-                  const SizedBox(height: WithMeSpace.lg),
-                  TextButton(
-                    onPressed: () => _startCheckIn(context),
-                    child: Text(
-                      'Or walk me through a check-in  →',
-                      style: WithMeText.option.copyWith(
-                        color: WithMeColors.teal,
-                        fontWeight: FontWeight.w600,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints:
+                          BoxConstraints(minHeight: constraints.maxHeight),
+                      child: IntrinsicHeight(
+                        child: Column(
+                          children: [
+                            const SizedBox(height: WithMeSpace.xl),
+                            SpeechBubble(
+                              text:
+                                  "Hi!\nI'm here with you.\nHow are you feeling today?",
+                              typewriter: true,
+                              onFinished: () {
+                                if (mounted) setState(() => _speaking = false);
+                              },
+                            ),
+                            const Spacer(),
+                            WithMeAvatar(
+                              size: 200,
+                              speaking: _speaking,
+                              expression: _speaking
+                                  ? MascotExpression.happy
+                                  : MascotExpression.listening,
+                            ),
+                            const SizedBox(height: WithMeSpace.lg),
+                            _TapToTalk(onTap: () => _openChat(context)),
+                            const SizedBox(height: WithMeSpace.md),
+                            Text('Tap to talk', style: WithMeText.body),
+                            const SizedBox(height: WithMeSpace.lg),
+                            TextButton(
+                              onPressed: () => _startCheckIn(context),
+                              child: Text(
+                                'Or walk me through a check-in  →',
+                                style: WithMeText.option.copyWith(
+                                  color: WithMeColors.teal,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: WithMeSpace.lg),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: WithMeSpace.lg),
-                ],
+                  );
+                },
               ),
             ),
           ),
