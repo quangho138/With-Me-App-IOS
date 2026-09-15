@@ -8,7 +8,6 @@ import '../Mascot/WithMeAvatar.dart';
 import '../Theme/WithMeTheme.dart';
 import 'CheckInScreen.dart';
 
-/// A message in the conversation.
 class ChatMessage {
   const ChatMessage({
     required this.text,
@@ -18,16 +17,9 @@ class ChatMessage {
 
   final String text;
   final bool fromUser;
-
-  /// Suggested replies rendered as chips under a companion message.
   final List<String> quickReplies;
 }
 
-/// The free-form conversation surface.
-///
-/// UI only. Replies come from a small canned script so the screen can be
-/// demonstrated and reviewed; the conversation engine plugs in behind
-/// [_reply] without any change to this widget.
 class CompanionChatScreen extends StatefulWidget {
   const CompanionChatScreen({super.key});
 
@@ -81,8 +73,6 @@ class _CompanionChatScreenState extends State<CompanionChatScreen> {
     });
     _scrollToEnd();
 
-    // A beat before replying — an instant answer reads as a lookup, not
-    // as listening.
     _replyTimer?.cancel();
     _replyTimer = Timer(const Duration(milliseconds: 1100), () {
       if (!mounted) return;
@@ -96,10 +86,6 @@ class _CompanionChatScreenState extends State<CompanionChatScreen> {
     });
   }
 
-  /// Placeholder responder.
-  ///
-  /// Replace this single method with the conversation engine — everything it
-  /// needs to return is a [ChatMessage].
   ChatMessage _reply(String input) {
     final lower = input.toLowerCase();
 
@@ -114,7 +100,7 @@ class _CompanionChatScreenState extends State<CompanionChatScreen> {
     if (lower.contains('anxious') || lower.contains('worried')) {
       return const ChatMessage(
         text:
-            "Thank you for telling me. Anxiety often shows up in the body first — shall we look there?",
+            'Thank you for telling me. Anxiety often shows up in the body first — shall we look there?',
         fromUser: false,
         quickReplies: ['Start a check-in', 'Try breathing'],
       );
@@ -163,6 +149,8 @@ class _CompanionChatScreenState extends State<CompanionChatScreen> {
         resizeToAvoidBottomInset: true,
         body: WithMeBackdrop(
           dimmed: true,
+          expression: _expression,
+          speaking: _typing,
           child: SafeArea(
             child: Column(
               children: [
@@ -199,58 +187,76 @@ class _CompanionChatScreenState extends State<CompanionChatScreen> {
   Widget _appBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
+        WithMeSpace.md,
         WithMeSpace.sm,
-        WithMeSpace.sm,
-        WithMeSpace.lg,
+        WithMeSpace.md,
         WithMeSpace.sm,
       ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(Icons.arrow_back_rounded),
-            color: WithMeColors.teal,
-            tooltip: 'Back',
-          ),
-          WithMeAvatarBadge(size: 40, expression: _expression),
-          const SizedBox(width: WithMeSpace.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'With Me',
-                  style: WithMeText.option.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  _typing ? 'thinking…' : 'Here. With you.',
-                  style: WithMeText.caption,
-                ),
-              ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: WithMeSpace.sm,
+          vertical: WithMeSpace.sm,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.56),
+          borderRadius: BorderRadius.circular(WithMeSpace.radiusLg),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.72)),
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: const Icon(Icons.arrow_back_rounded),
+              color: WithMeColors.tealDeep,
+              tooltip: 'Back',
             ),
-          ),
-        ],
+            WithMeAvatarBadge(size: 42, expression: _expression),
+            const SizedBox(width: WithMeSpace.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'With Me Companion',
+                    style: WithMeText.option.copyWith(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    _typing ? 'thinking…' : 'Here. With you.',
+                    style: WithMeText.caption.copyWith(
+                      color: WithMeColors.inkSoft,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _composer() {
     return Container(
-      padding: EdgeInsets.fromLTRB(
-        WithMeSpace.lg,
+      margin: const EdgeInsets.fromLTRB(
+        WithMeSpace.md,
+        0,
+        WithMeSpace.md,
+        WithMeSpace.md,
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        WithMeSpace.md,
         WithMeSpace.sm,
-        WithMeSpace.lg,
+        WithMeSpace.md,
         WithMeSpace.md,
       ),
       decoration: BoxDecoration(
-        color: WithMeColors.creamLight.withValues(alpha: 0.96),
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(WithMeSpace.radiusLg),
-        ),
+        color: Colors.white.withValues(alpha: 0.74),
+        borderRadius: BorderRadius.circular(WithMeSpace.radiusLg),
         boxShadow: WithMeSpace.cardShadow,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -267,7 +273,7 @@ class _CompanionChatScreenState extends State<CompanionChatScreen> {
                 hintText: 'Tell me what’s going on…',
                 hintStyle: WithMeText.body,
                 filled: true,
-                fillColor: WithMeColors.sand.withValues(alpha: 0.7),
+                fillColor: Colors.white.withValues(alpha: 0.72),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: WithMeSpace.lg,
                   vertical: WithMeSpace.md,
@@ -307,7 +313,7 @@ class _CompanionChatScreenState extends State<CompanionChatScreen> {
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: filled ? WithMeColors.teal : WithMeColors.tealSoft,
+        color: filled ? WithMeColors.teal : Colors.white.withValues(alpha: 0.72),
         shape: const CircleBorder(),
         child: InkWell(
           customBorder: const CircleBorder(),
@@ -365,13 +371,20 @@ class _MessageRow extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: fromUser
-                        ? WithMeColors.teal
-                        : WithMeColors.creamLight.withValues(alpha: 0.96),
+                        ? WithMeColors.teal.withValues(alpha: 0.94)
+                        : Colors.white.withValues(alpha: 0.86),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(WithMeSpace.radiusMd),
                       topRight: const Radius.circular(WithMeSpace.radiusMd),
-                      bottomLeft: Radius.circular(fromUser ? WithMeSpace.radiusMd : 4),
-                      bottomRight: Radius.circular(fromUser ? 4 : WithMeSpace.radiusMd),
+                      bottomLeft:
+                          Radius.circular(fromUser ? WithMeSpace.radiusMd : 6),
+                      bottomRight:
+                          Radius.circular(fromUser ? 6 : WithMeSpace.radiusMd),
+                    ),
+                    border: Border.all(
+                      color: fromUser
+                          ? Colors.white.withValues(alpha: 0.25)
+                          : Colors.white.withValues(alpha: 0.9),
                     ),
                     boxShadow: WithMeSpace.cardShadow,
                   ),
@@ -386,7 +399,6 @@ class _MessageRow extends StatelessWidget {
               ),
             ],
           ),
-          // Only the newest message offers its chips, so old ones don't pile up.
           if (!fromUser && isLatest && message.quickReplies.isNotEmpty) ...[
             const SizedBox(height: WithMeSpace.sm),
             Padding(
@@ -426,10 +438,10 @@ class _QuickReplyChip extends StatelessWidget {
             vertical: WithMeSpace.sm,
           ),
           decoration: BoxDecoration(
-            color: WithMeColors.creamLight.withValues(alpha: 0.9),
+            color: Colors.white.withValues(alpha: 0.82),
             borderRadius: BorderRadius.circular(WithMeSpace.radiusPill),
             border: Border.all(
-              color: WithMeColors.teal.withValues(alpha: 0.45),
+              color: WithMeColors.teal.withValues(alpha: 0.42),
               width: 1.4,
             ),
           ),
@@ -437,7 +449,7 @@ class _QuickReplyChip extends StatelessWidget {
             label,
             style: WithMeText.option.copyWith(
               color: WithMeColors.teal,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               fontSize: 14,
             ),
           ),
@@ -447,7 +459,6 @@ class _QuickReplyChip extends StatelessWidget {
   }
 }
 
-/// Three dots that rise in sequence while the companion composes a reply.
 class _TypingRow extends StatefulWidget {
   const _TypingRow();
 
@@ -485,12 +496,12 @@ class _TypingRowState extends State<_TypingRow>
               vertical: WithMeSpace.md,
             ),
             decoration: BoxDecoration(
-              color: WithMeColors.creamLight.withValues(alpha: 0.96),
+              color: Colors.white.withValues(alpha: 0.86),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(WithMeSpace.radiusMd),
                 topRight: Radius.circular(WithMeSpace.radiusMd),
                 bottomRight: Radius.circular(WithMeSpace.radiusMd),
-                bottomLeft: Radius.circular(4),
+                bottomLeft: Radius.circular(6),
               ),
               boxShadow: WithMeSpace.cardShadow,
             ),
@@ -529,8 +540,6 @@ class _TypingRowState extends State<_TypingRow>
     );
   }
 
-  /// 0 -> 1 -> 0 over the first 60% of the cycle, flat after — so each dot
-  /// pops once then rests.
   double _bounce(double t) =>
       t < 0.6 ? (1 - (t / 0.3 - 1).abs()).clamp(0.0, 1.0).toDouble() : 0.0;
 }

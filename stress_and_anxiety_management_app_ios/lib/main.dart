@@ -16,6 +16,7 @@ import 'WithMe/Screens/CompanionChatScreen.dart';
 import 'WithMe/Screens/MascotGalleryScreen.dart';
 import 'WithMe/Screens/WithMeGreetingScreen.dart';
 import 'WithMe/Screens/WithMeWelcomeScreen.dart';
+import 'WithMe/Theme/WithMeTheme.dart';
 
 /// Entry point of the Flutter application
 void main() {
@@ -43,10 +44,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner:
           false, // Hides the debug banner in the top-right
       title: 'HOWRU.LIFE', // App title shown in task manager or window
-      theme: ThemeData(
-        primarySwatch:
-            Colors.blueGrey, // Sets default colors for app bars, buttons, etc.
-      ),
+      // Use the warm cream / teal visual system from the reference UI as
+      // the default theme. Screens with their own local styling can still
+      // override it, but shared controls now feel like one product.
+      theme: buildWithMeTheme(),
 
       // Routes define named navigation paths for different screens
       routes: {

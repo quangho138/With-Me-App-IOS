@@ -1,46 +1,45 @@
 import 'package:flutter/material.dart';
+
 import '../Components/ActionButton.dart';
-import '../WithMe/Screens/WithMeGreetingScreen.dart';
-import '../Screens/CalendarScreen.dart';
 import '../Screens/CalendarScreenWithCallback.dart';
 import '../Screens/MoodSelectionScreen.dart';
 import '../Screens/SelfReflectionScreen.dart';
+import '../WithMe/Screens/WithMeGreetingScreen.dart';
+import '../WithMe/Theme/WithMeTheme.dart';
 
 class HomeViewModel {
   List<Widget> getButtons(BuildContext context) {
     return [
       ActionButton(
         label: 'Talk to With Me',
-        icon: Icons.favorite,
+        icon: Icons.favorite_rounded,
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const WithMeGreetingScreen()),
         ),
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: WithMeSpace.sm),
       ActionButton(
         label: 'Dashboard',
-        icon: Icons.dashboard,
+        icon: Icons.dashboard_rounded,
         onPressed: () => Navigator.pushNamed(context, '/dashboard'),
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: WithMeSpace.sm),
       ActionButton(
         label: 'Awareness Questions',
-        icon: Icons.help,
-        onPressed: () {
-          _showDateSelectionDialog(context);
-        },
+        icon: Icons.psychology_alt_rounded,
+        onPressed: () => _showDateSelectionDialog(context),
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: WithMeSpace.sm),
       ActionButton(
         label: 'Breathing Exercise',
-        icon: Icons.air,
+        icon: Icons.air_rounded,
         onPressed: () => Navigator.pushNamed(context, '/breathing-exercise'),
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: WithMeSpace.sm),
       ActionButton(
         label: 'Mood Tracker',
-        icon: Icons.emoji_emotions,
+        icon: Icons.emoji_emotions_rounded,
         onPressed: () {
           Navigator.push(
             context,
@@ -50,7 +49,9 @@ class HomeViewModel {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => MoodSelectionScreen(selectedDate: selectedDate),
+                      builder: (_) => MoodSelectionScreen(
+                        selectedDate: selectedDate,
+                      ),
                     ),
                   );
                 },
@@ -59,105 +60,75 @@ class HomeViewModel {
           );
         },
       ),
-      const SizedBox(height: 12),
-      // ActionButton(
-      //   label: 'Monthly Calendar',
-      //   icon: Icons.calendar_today,
-      //   onPressed: () {
-      //     Navigator.push(
-      //       context,
-      //       MaterialPageRoute(
-      //         builder: (context) => const CalendarScreen(),
-      //       ),
-      //     );
-      //   },
-      // ),
     ];
   }
 
   List<Map<String, dynamic>> getMenuItems() {
     return [
-      {'icon': Icons.dashboard, 'label': 'Dashboard'},
-      {'icon': Icons.help, 'label': 'Awareness Questions'},
-      {'icon': Icons.emoji_emotions, 'label': 'Mood Tracker'},
-      //{'icon': Icons.calendar_today, 'label': 'Monthly Calendar'},
+      {'icon': Icons.dashboard_rounded, 'label': 'Dashboard'},
+      {'icon': Icons.psychology_alt_rounded, 'label': 'Awareness Questions'},
+      {'icon': Icons.emoji_emotions_rounded, 'label': 'Mood Tracker'},
     ];
   }
 
   void _showDateSelectionDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (dialogContext) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF2F3941),
+          backgroundColor: WithMeColors.creamLight,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(WithMeSpace.radiusMd),
           ),
           title: const Text(
             'When would you like to reflect?',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: WithMeText.question,
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Choose to reflect on today\'s experiences or select a different date.',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.maxFinite,
-                child: ElevatedButton.icon(
+          content: const Text(
+            "Choose today's experiences or select a different date.",
+            style: WithMeText.body,
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(
+            WithMeSpace.lg,
+            0,
+            WithMeSpace.lg,
+            WithMeSpace.lg,
+          ),
+          actions: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                     _navigateToReflection(context, DateTime.now());
                   },
-                  icon: const Icon(Icons.today, color: Colors.white),
-                  label: const Text(
-                    'Use Today\'s Date',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF546E7A),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  icon: const Icon(Icons.today_rounded),
+                  label: const Text('Use today'),
                 ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.maxFinite,
-                child: OutlinedButton.icon(
+                const SizedBox(height: WithMeSpace.sm),
+                OutlinedButton.icon(
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                     _navigateToCalendarSelection(context);
                   },
-                  icon: const Icon(Icons.calendar_month, color: Colors.white70),
-                  label: const Text(
-                    'Choose Different Date',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white70),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    foregroundColor: WithMeColors.teal,
+                    side: const BorderSide(color: WithMeColors.teal),
+                    minimumSize: const Size(double.infinity, 52),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(
+                        WithMeSpace.radiusPill,
+                      ),
                     ),
                   ),
+                  icon: const Icon(Icons.calendar_month_rounded),
+                  label: const Text('Choose a different date'),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         );
       },
     );
@@ -181,7 +152,9 @@ class HomeViewModel {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => SelfReflectScreen(selectedDate: selectedDate),
+                builder: (context) => SelfReflectScreen(
+                  selectedDate: selectedDate,
+                ),
               ),
             );
           },

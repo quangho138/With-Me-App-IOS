@@ -8,11 +8,6 @@ import '../Mascot/WithMeAvatar.dart';
 import '../Theme/WithMeTheme.dart';
 import 'ActionPlanScreen.dart';
 
-/// Storyboard 3–10 — the guided check-in.
-///
-/// Every step shares one layout: question at the top, answers in the middle,
-/// the companion watching from the bottom, and a Continue button. Only the
-/// answer area changes, driven by [kCheckInSteps].
 class CheckInScreen extends StatefulWidget {
   const CheckInScreen({super.key});
 
@@ -24,9 +19,9 @@ class _CheckInScreenState extends State<CheckInScreen> {
   final _controller = PageController();
   final _answers = CheckInAnswers();
   int _index = 0;
+  MascotExpression _backgroundExpression = kCheckInSteps.first.expression;
 
   CheckInStep get _step => kCheckInSteps[_index];
-
   bool get _canContinue => _answers.isAnswered(_step);
 
   @override
@@ -59,12 +54,98 @@ class _CheckInScreenState extends State<CheckInScreen> {
     );
   }
 
+  MascotExpression _expressionForScale(CheckInStep step, int value) {
+    switch (step.id) {
+      case 'stress_level':
+        if (value >= 4) return MascotExpression.sad;
+        if (value == 3) return MascotExpression.thinking;
+        return MascotExpression.happy;
+      case 'motivation':
+        if (value >= 4) return MascotExpression.encouraging;
+        if (value == 3) return MascotExpression.listening;
+        return MascotExpression.sad;
+      default:
+        return step.expression;
+    }
+  }
+
+  MascotExpression _expressionForOption(CheckInStep step, String label) {
+    final l = label.toLowerCase();
+
+    const sadWords = {
+      'anxious',
+      'overwhelmed',
+      'frustrated',
+      'sad',
+      'angry',
+      'tension',
+      'headaches',
+      'sleep',
+      'low energy',
+      'stomach',
+      'negative',
+      'self-doubt',
+      'withdrawing',
+      'overeating',
+      'overworking',
+    };
+    const thinkingWords = {
+      'work',
+      'school',
+      'social',
+      'home',
+      'racing',
+      "can't focus",
+      'worrying',
+      'procrastinating',
+      'avoiding',
+      'other',
+    };
+    const positiveWords = {
+      'feel calmer',
+      'be more in control',
+      'improve my focus',
+      'be kinder to myself',
+      'take small steps',
+    };
+
+    if (sadWords.any(l.contains)) return MascotExpression.sad;
+    if (thinkingWords.any(l.contains)) return MascotExpression.thinking;
+    if (positiveWords.any(l.contains)) return MascotExpression.encouraging;
+
+    switch (step.id) {
+      case 'emotion':
+        return MascotExpression.sad;
+      case 'mind':
+      case 'life_area':
+        return MascotExpression.thinking;
+      case 'intention':
+        return MascotExpression.encouraging;
+      default:
+        return step.expression;
+    }
+  }
+
+  MascotExpression _expressionForCurrentAnswer(CheckInStep step) {
+    if (!_answers.isAnswered(step)) return step.expression;
+
+    if (step.kind == StepKind.scale) {
+      return _expressionForScale(step, _answers.scale(step.id)!);
+    }
+
+    final picked = _answers.selected(step.id);
+    if (picked.isEmpty) return step.expression;
+    return _expressionForOption(step, picked.last);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Theme(
       data: buildWithMeTheme(),
       child: Scaffold(
         body: WithMeBackdrop(
+          dimmed: true,
+          expression: _backgroundExpression,
           child: SafeArea(
             child: Column(
               children: [
@@ -72,14 +153,24 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 Expanded(
                   child: PageView.builder(
                     controller: _controller,
-                    // Answers gate progress, so swiping ahead is disabled.
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: kCheckInSteps.length,
-                    onPageChanged: (i) => setState(() => _index = i),
+                    onPageChanged: (i) => setState(() {
+                      _index = i;
+                      _backgroundExpression = _expressionForCurrentAnswer(kCheckInSteps[i]);
+                    }),
                     itemBuilder: (context, i) => _StepView(
                       step: kCheckInSteps[i],
                       answers: _answers,
                       onChanged: () => setState(() {}),
+                      onScaleSelected: (value) => setState(() {
+                        _backgroundExpression = _expressionForScale(kCheckInSteps[i], value);
+                      }),
+                      onOptionSelected: (option) => setState(() {
+                        _backgroundExpression = option == null
+                            ? kCheckInSteps[i].expression
+                            : _expressionForOption(kCheckInSteps[i], option.label);
+                      }),
                     ),
                   ),
                 ),
@@ -95,25 +186,46 @@ class _CheckInScreenState extends State<CheckInScreen> {
   Widget _header() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
+        WithMeSpace.md,
         WithMeSpace.sm,
-        WithMeSpace.sm,
-        WithMeSpace.sm,
+        WithMeSpace.md,
         0,
       ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: _back,
-            icon: const Icon(Icons.arrow_back_rounded),
-            color: WithMeColors.teal,
-            tooltip: 'Back',
-          ),
-          Expanded(
-            child: StepDots(count: kCheckInSteps.length, index: _index),
-          ),
-          // Balances the back button so the dots stay centred.
-          const SizedBox(width: 48),
-        ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: WithMeSpace.sm,
+          vertical: WithMeSpace.sm,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.56),
+          borderRadius: BorderRadius.circular(WithMeSpace.radiusLg),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.74)),
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: _back,
+              icon: const Icon(Icons.arrow_back_rounded),
+              color: WithMeColors.tealDeep,
+              tooltip: 'Back',
+            ),
+            Expanded(
+              child: Column(
+                children: [
+                  StepDots(count: kCheckInSteps.length, index: _index),
+                  const SizedBox(height: 6),
+                  Text(
+                    'WITH ME CHECK-IN',
+                    style: WithMeText.sectionLabel.copyWith(
+                      color: WithMeColors.tealDeep,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 48),
+          ],
+        ),
       ),
     );
   }
@@ -121,26 +233,32 @@ class _CheckInScreenState extends State<CheckInScreen> {
   Widget _footer() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-        WithMeSpace.xl,
+        WithMeSpace.md,
         WithMeSpace.sm,
-        WithMeSpace.xl,
+        WithMeSpace.md,
         WithMeSpace.lg,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // The companion stays on screen for the whole flow, reacting to
-          // each question — this is what makes it feel accompanied.
-          WithMeAvatar(
-            size: 88,
-            expression: _canContinue
-                ? MascotExpression.encouraging
-                : _step.expression,
-          ),
-          const SizedBox(width: WithMeSpace.md),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: WithMeSpace.lg),
+      child: Container(
+        padding: const EdgeInsets.all(WithMeSpace.md),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.66),
+          borderRadius: BorderRadius.circular(WithMeSpace.radiusLg),
+          boxShadow: WithMeSpace.cardShadow,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.82)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            WithMeAvatarBadge(
+              size: 54,
+              expression: _canContinue
+                  ? (_backgroundExpression == MascotExpression.sad
+                      ? MascotExpression.listening
+                      : MascotExpression.encouraging)
+                  : _backgroundExpression,
+            ),
+            const SizedBox(width: WithMeSpace.md),
+            Expanded(
               child: WithMeButton(
                 label: _index == kCheckInSteps.length - 1
                     ? 'See my plan'
@@ -149,68 +267,87 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 onPressed: _canContinue ? _next : null,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Renders a single step's question and answer controls.
 class _StepView extends StatelessWidget {
   const _StepView({
     required this.step,
     required this.answers,
     required this.onChanged,
+    required this.onScaleSelected,
+    required this.onOptionSelected,
   });
 
   final CheckInStep step;
   final CheckInAnswers answers;
   final VoidCallback onChanged;
+  final ValueChanged<int> onScaleSelected;
+  final ValueChanged<StepOption?> onOptionSelected;
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(
-        horizontal: WithMeSpace.xl,
+        horizontal: WithMeSpace.md,
         vertical: WithMeSpace.md,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            step.section,
-            style: WithMeText.sectionLabel,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: WithMeSpace.sm),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: WithMeSpace.lg,
-              vertical: WithMeSpace.lg,
-            ),
-            decoration: BoxDecoration(
-              color: WithMeColors.creamLight.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(WithMeSpace.radiusMd),
-              boxShadow: WithMeSpace.cardShadow,
-            ),
-            child: Text(
-              step.question,
-              style: WithMeText.question,
-              textAlign: TextAlign.center,
-            ),
-          ),
-          if (step.helper != null) ...[
-            const SizedBox(height: WithMeSpace.sm),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(
+          WithMeSpace.lg,
+          WithMeSpace.lg,
+          WithMeSpace.lg,
+          WithMeSpace.md,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.58),
+          borderRadius: BorderRadius.circular(WithMeSpace.radiusXl),
+          boxShadow: WithMeSpace.cardShadow,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.82)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Text(
-              step.helper!,
-              style: WithMeText.caption,
+              step.section,
+              style: WithMeText.sectionLabel,
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: WithMeSpace.sm),
+            Container(
+              constraints: const BoxConstraints(minHeight: 92),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(
+                horizontal: WithMeSpace.lg,
+                vertical: WithMeSpace.lg,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.84),
+                borderRadius: BorderRadius.circular(WithMeSpace.radiusMd),
+                boxShadow: WithMeSpace.cardShadow,
+              ),
+              child: Text(
+                step.question,
+                style: WithMeText.question,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            if (step.helper != null) ...[
+              const SizedBox(height: WithMeSpace.sm),
+              Text(
+                step.helper!,
+                style: WithMeText.caption,
+                textAlign: TextAlign.center,
+              ),
+            ],
+            const SizedBox(height: WithMeSpace.xl),
+            _answerArea(),
           ],
-          const SizedBox(height: WithMeSpace.xl),
-          _answerArea(),
-        ],
+        ),
       ),
     );
   }
@@ -224,10 +361,10 @@ class _StepView extends StatelessWidget {
           highLabel: step.highLabel,
           onChanged: (v) {
             answers.setScale(step.id, v);
+            onScaleSelected(v);
             onChanged();
           },
         );
-
       case StepKind.grid:
         return GridView.count(
           shrinkWrap: true,
@@ -235,7 +372,7 @@ class _StepView extends StatelessWidget {
           crossAxisCount: 2,
           mainAxisSpacing: WithMeSpace.md,
           crossAxisSpacing: WithMeSpace.md,
-          childAspectRatio: 1.35,
+          childAspectRatio: 1.18,
           children: [
             for (final o in step.options)
               OptionGridCard(
@@ -244,24 +381,30 @@ class _StepView extends StatelessWidget {
                 tint: o.tint ?? WithMeColors.teal,
                 selected: answers.selected(step.id).contains(o.label),
                 onTap: () {
-                  answers.toggle(step.id, o.label,
-                      multiSelect: step.multiSelect);
+                  answers.toggle(step.id, o.label, multiSelect: step.multiSelect);
+                  final selected = answers.selected(step.id);
+                  StepOption? active;
+                  if (selected.isNotEmpty) {
+                    active = step.options.firstWhere(
+                      (item) => selected.contains(item.label),
+                    );
+                  }
+                  onOptionSelected(active);
                   onChanged();
                 },
               ),
           ],
         );
-
       case StepKind.list:
         return Column(children: _tiles());
-
       case StepKind.gauge:
-        // The needle reflects how in control the user said they feel, which is
-        // the inverse of the stress rating they gave at the start.
         final stress = answers.scale('stress_level') ?? 3;
         return Column(
           children: [
-            IntentionGauge(value: (5 - stress) / 4),
+            Container(
+              padding: const EdgeInsets.only(top: WithMeSpace.sm),
+              child: IntentionGauge(value: (5 - stress) / 4),
+            ),
             const SizedBox(height: WithMeSpace.lg),
             ..._tiles(),
           ],
@@ -278,6 +421,14 @@ class _StepView extends StatelessWidget {
             selected: answers.selected(step.id).contains(o.label),
             onTap: () {
               answers.toggle(step.id, o.label, multiSelect: step.multiSelect);
+              final selected = answers.selected(step.id);
+              StepOption? active;
+              if (selected.isNotEmpty) {
+                active = step.options.firstWhere(
+                  (item) => selected.contains(item.label),
+                );
+              }
+              onOptionSelected(active);
               onChanged();
             },
           ),

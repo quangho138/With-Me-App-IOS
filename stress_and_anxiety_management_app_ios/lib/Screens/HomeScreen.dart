@@ -1,98 +1,85 @@
 import 'package:flutter/material.dart';
-import '../ViewModels/HomeViewModel.dart';
+
 import '../Components/MainScaffold.dart';
-import '../Database/LocalDatabase.dart';
-import '../Screens/SettingScreen.dart';
 import '../Components/WelcomeCardComponent.dart';
+import '../ViewModels/HomeViewModel.dart';
+import '../WithMe/Mascot/MascotExpression.dart';
+import '../WithMe/Mascot/WithMeAvatar.dart';
+import '../WithMe/Theme/WithMeTheme.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  final dbHelper = DatabaseHelper();
-  late Future<String?> _userNameFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserName();
-  }
-
-  void _loadUserName() {
-    _userNameFuture = dbHelper.getUserName();
-  }
-
-  Future<void> _navigateToSettings(BuildContext context) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SettingScreen()),
-    );
-    setState(() {
-      _loadUserName();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     final viewModel = HomeViewModel();
-    final mediaQuery = MediaQuery.of(context);
-    final screenWidth = mediaQuery.size.width;
-    final screenHeight = mediaQuery.size.height;
-
-    // Dynamic sizing
-    final logoWidth = screenWidth * 0.45;
-    final logoHeight = screenHeight * 0.22;
-    final cardFontSize = screenWidth * 0.045;
-    final spacingSmall = screenHeight * 0.015;
-    final spacingMedium = screenHeight * 0.025;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final horizontalPadding = screenWidth < 420 ? 18.0 : 24.0;
 
     return MainScaffold(
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(
-          vertical: spacingMedium,
-          horizontal: screenWidth * 0.04,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Image.asset(
-              'assets/logo.png',
-              width: logoWidth,
-              height: logoHeight,
-              fit: BoxFit.contain,
-            ),
-            SizedBox(height: spacingMedium),
-
-            // Use WelcomeCard component
-            FutureBuilder<String?>(
-              future: _userNameFuture,
-              builder: (context, snapshot) {
-                return WelcomeCard(
-                  fontSize: cardFontSize,
-                  padding: screenWidth * 0.04,
-                );
-              },
-            ),
-
-            SizedBox(height: spacingMedium),
-
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: viewModel.getButtons(context).map((button) {
-                return Padding(
-                  padding: EdgeInsets.symmetric(vertical: spacingSmall / 2),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: button,
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            WithMeSpace.xl,
+            horizontalPadding,
+            110,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'YOUR SPACE',
+                textAlign: TextAlign.center,
+                style: WithMeText.sectionLabel,
+              ),
+              const SizedBox(height: WithMeSpace.sm),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const WithMeAvatar(
+                    size: 76,
+                    expression: MascotExpression.encouraging,
                   ),
-                );
-              }).toList(),
-            ),
-          ],
+                  const SizedBox(width: WithMeSpace.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'How are you doing today?',
+                          style: WithMeText.title.copyWith(
+                            color: WithMeColors.ink,
+                            fontSize: 23,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Choose what feels most useful right now.',
+                          style: WithMeText.body,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: WithMeSpace.md),
+              WelcomeCard(
+                fontSize: screenWidth < 420 ? 18 : 20,
+                padding: screenWidth < 420 ? 16 : 18,
+              ),
+              const SizedBox(height: WithMeSpace.xl),
+              Text(
+                'WHAT WOULD YOU LIKE TO DO?',
+                style: WithMeText.sectionLabel.copyWith(
+                  color: WithMeColors.inkSoft,
+                ),
+              ),
+              const SizedBox(height: WithMeSpace.sm),
+              ...viewModel.getButtons(context),
+            ],
+          ),
         ),
       ),
     );

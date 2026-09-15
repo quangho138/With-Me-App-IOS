@@ -1,51 +1,79 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../Mascot/MascotExpression.dart';
 import '../Theme/WithMeTheme.dart';
 
-/// The sunset-beach backdrop every With Me screen sits on.
+/// Scenic animated backdrop for the With Me companion flow.
 ///
-/// Painted rather than shipped as a photo: it is a few kilobytes of code
-/// instead of a few megabytes of JPEG, it scales to every device without
-/// banding, and the horizon can be tuned to keep contrast under the text.
-///
-/// Everything here is deliberately low-contrast and blurred. The backdrop is
-/// scenery, not subject matter — if any element reads as a distinct shape on
-/// top of the content, it is wrong.
+/// The scene uses a detailed illustrated background plus a larger animated
+/// mascot overlay that matches the user's reference style more closely.
 class WithMeBackdrop extends StatelessWidget {
   const WithMeBackdrop({
     super.key,
     required this.child,
     this.dimmed = false,
+    this.expression = MascotExpression.idle,
+    this.speaking = false,
   });
 
-  final Widget child;
+  static const String _backgroundAsset =
+      'assets/with_me/companion_detailed_backdrop.png';
 
-  /// Softens the backdrop further when dense content sits on top of it.
+  final Widget child;
   final bool dimmed;
+  final MascotExpression expression;
+  final bool speaking;
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       fit: StackFit.expand,
       children: [
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: WithMeColors.sunset,
-              // Sky to 0.44, horizon glow to 0.58, sea to 0.80, then sand.
-              stops: [0.0, 0.30, 0.52, 0.72, 1.0],
+        Positioned.fill(
+          child: Image.asset(
+            _backgroundAsset,
+            fit: BoxFit.cover,
+            alignment: const Alignment(0, 0.12),
+          ),
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white.withValues(alpha: dimmed ? 0.10 : 0.03),
+                  Colors.white.withValues(alpha: dimmed ? 0.04 : 0.00),
+                  const Color(0xFFFEF4E9).withValues(alpha: dimmed ? 0.10 : 0.04),
+                  WithMeColors.sand.withValues(alpha: dimmed ? 0.28 : 0.10),
+                ],
+                stops: const [0.0, 0.32, 0.68, 1.0],
+              ),
             ),
           ),
         ),
-        const Positioned.fill(child: CustomPaint(painter: _SceneryPainter())),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: Align(
+              alignment: const Alignment(0, 0.56),
+              child: _BackdropMascot(
+                expression: expression,
+                dimmed: dimmed,
+                speaking: speaking,
+              ),
+            ),
+          ),
+        ),
         if (dimmed)
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: WithMeColors.sand.withValues(alpha: 0.55),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.16),
+              ),
             ),
           ),
         child,
@@ -54,104 +82,149 @@ class WithMeBackdrop extends StatelessWidget {
   }
 }
 
-/// A high, soft sun; a barely-there headland on the horizon; a few lines of
-/// surf low in the frame.
-class _SceneryPainter extends CustomPainter {
-  const _SceneryPainter();
+class _BackdropMascot extends StatefulWidget {
+  const _BackdropMascot({
+    required this.expression,
+    required this.dimmed,
+    required this.speaking,
+  });
 
-  /// Where sky meets sea, as a fraction of height.
-  static const double _horizon = 0.56;
+  static const String _neutral = 'assets/with_me/companion_mascot_neutral.png';
+  static const String _blink = 'assets/with_me/companion_mascot_blink.png';
+  static const String _thinking = 'assets/with_me/companion_mascot_thinking.png';
+  static const String _sad = 'assets/with_me/companion_mascot_sad.png';
+
+  final MascotExpression expression;
+  final bool dimmed;
+  final bool speaking;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
+  State<_BackdropMascot> createState() => _BackdropMascotState();
+}
 
-    _sun(canvas, w, h);
-    _headland(canvas, w, h);
-    _surf(canvas, w, h);
+class _BackdropMascotState extends State<_BackdropMascot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _breath;
+  Timer? _blinkTimer;
+  bool _showBlink = false;
+  final _random = math.Random();
+
+  @override
+  void initState() {
+    super.initState();
+    _breath = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    )..repeat(reverse: true);
+    _scheduleBlink();
   }
 
-  /// Sits high in the sky so it never collides with content in the middle of
-  /// the screen, and has no hard edge.
-  void _sun(Canvas canvas, double w, double h) {
-    final centre = Offset(w * 0.76, h * 0.16);
-
-    canvas.drawCircle(
-      centre,
-      w * 0.42,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            const Color(0xFFFFF0D2).withValues(alpha: 0.75),
-            const Color(0xFFFFE9C4).withValues(alpha: 0.18),
-            const Color(0xFFFFE9C4).withValues(alpha: 0.0),
-          ],
-          stops: const [0.0, 0.45, 1.0],
-        ).createShader(Rect.fromCircle(center: centre, radius: w * 0.42)),
-    );
-
-    // A soft core, blurred so it reads as glare rather than a drawn disc.
-    canvas.drawCircle(
-      centre,
-      w * 0.06,
-      Paint()
-        ..color = const Color(0xFFFFF8E8).withValues(alpha: 0.7)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, w * 0.05),
-    );
-  }
-
-  /// Distant land, drawn as one smooth silhouette sitting on the horizon.
-  void _headland(Canvas canvas, double w, double h) {
-    final y = h * _horizon;
-
-    final path = Path()
-      ..moveTo(0, y)
-      ..lineTo(0, y - h * 0.045)
-      ..cubicTo(
-        w * 0.06, y - h * 0.075,
-        w * 0.13, y - h * 0.085,
-        w * 0.20, y - h * 0.048,
-      )
-      ..cubicTo(
-        w * 0.26, y - h * 0.020,
-        w * 0.31, y - h * 0.004,
-        w * 0.38, y,
-      )
-      ..close();
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = const Color(0xFF9FB9B3).withValues(alpha: 0.28)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
-    );
-  }
-
-  /// Three lines of surf easing toward the shore, fading as they come forward.
-  void _surf(Canvas canvas, double w, double h) {
-    for (var i = 0; i < 3; i++) {
-      final y = h * (_horizon + 0.06 + i * 0.055);
-      final path = Path()..moveTo(0, y);
-      for (var x = 0.0; x < w; x += w / 8) {
-        path.quadraticBezierTo(
-          x + w / 16,
-          y + math.sin(i * 1.7 + x / w * math.pi * 2) * 3.5,
-          x + w / 8,
-          y,
-        );
+  @override
+  void didUpdateWidget(covariant _BackdropMascot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_usesSpecialExpression(widget.expression) !=
+        _usesSpecialExpression(oldWidget.expression)) {
+      if (_usesSpecialExpression(widget.expression)) {
+        _cancelBlink(reset: true);
+      } else {
+        _scheduleBlink();
       }
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = Colors.white.withValues(alpha: 0.22 - i * 0.055)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3 - i * 0.6
-          ..strokeCap = StrokeCap.round,
-      );
     }
   }
 
+  bool _usesSpecialExpression(MascotExpression expression) {
+    return expression == MascotExpression.thinking ||
+        expression == MascotExpression.sad ||
+        expression == MascotExpression.concerned;
+  }
+
+  void _cancelBlink({bool reset = false}) {
+    _blinkTimer?.cancel();
+    if (reset && mounted && _showBlink) {
+      setState(() => _showBlink = false);
+    }
+  }
+
+  void _scheduleBlink() {
+    _cancelBlink();
+    if (_usesSpecialExpression(widget.expression)) return;
+
+    _blinkTimer = Timer(
+      Duration(milliseconds: 2600 + _random.nextInt(2800)),
+      () async {
+        if (!mounted || _usesSpecialExpression(widget.expression)) return;
+        setState(() => _showBlink = true);
+        await Future<void>.delayed(const Duration(milliseconds: 170));
+        if (!mounted) return;
+        setState(() => _showBlink = false);
+        _scheduleBlink();
+      },
+    );
+  }
+
+  String get _assetPath {
+    if (widget.expression == MascotExpression.thinking) {
+      return _BackdropMascot._thinking;
+    }
+    if (widget.expression == MascotExpression.sad ||
+        widget.expression == MascotExpression.concerned) {
+      return _BackdropMascot._sad;
+    }
+    if (_showBlink) {
+      return _BackdropMascot._blink;
+    }
+    return _BackdropMascot._neutral;
+  }
+
   @override
-  bool shouldRepaint(covariant _SceneryPainter oldDelegate) => false;
+  void dispose() {
+    _blinkTimer?.cancel();
+    _breath.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final mascotWidth = math.min(width * 0.62, 320.0);
+    final opacity = widget.dimmed ? 0.78 : 0.98;
+
+    return AnimatedBuilder(
+      animation: _breath,
+      builder: (context, child) {
+        final t = Curves.easeInOutSine.transform(_breath.value);
+        final speakBump = widget.speaking ? 0.018 : 0.0;
+        final scale = 0.985 + t * 0.025 + speakBump;
+        final dy = 8 - t * 12;
+
+        return Transform.translate(
+          offset: Offset(0, dy),
+          child: Transform.scale(
+            scale: scale,
+            child: Opacity(
+              opacity: opacity,
+              child: Container(
+                width: mascotWidth,
+                foregroundDecoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: widget.dimmed ? 0.08 : 0.05),
+                      blurRadius: 24,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Image.asset(
+                  _assetPath,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

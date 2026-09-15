@@ -1,75 +1,53 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens for the "With Me" AI companion experience.
-///
-/// The palette is taken from the product owners' Hawaiian-style concept board:
-/// warm cream paper, deep teal ink and controls, hibiscus coral accents,
-/// leaf greens, and a sunset gradient backdrop.
-///
-/// These tokens are deliberately kept separate from the legacy HOWRU.LIFE
-/// blue-grey theme so the two can coexist while the companion is rolled out.
+/// Brand palette, spacing, typography and motion for the With Me companion.
 class WithMeColors {
   WithMeColors._();
 
-  // --- Ink / brand ---------------------------------------------------------
-  /// Primary teal used for buttons, headings and the wordmark.
-  static const Color teal = Color(0xFF1F7A7A);
-  static const Color tealDeep = Color(0xFF135C5C);
+  // --- Primary palette -----------------------------------------------------
+  static const Color teal = Color(0xFF2A8887);
+  static const Color tealDeep = Color(0xFF226E71);
   static const Color tealLight = Color(0xFF3FA0A0);
-  static const Color tealSoft = Color(0xFFD7EDEC);
+  static const Color tealSoft = Color(0xFFCAE9E5);
 
-  // --- Paper / surfaces ----------------------------------------------------
-  /// Page background behind the sunset gradient.
-  static const Color sand = Color(0xFFFDF4E3);
-  /// Card and answer-tile fill.
-  static const Color cream = Color(0xFFFBF2DE);
-  /// Slightly brighter cream for the speech bubble.
-  static const Color creamLight = Color(0xFFFFF9EC);
-  static const Color creamShadow = Color(0x1A6B5A3E);
+  static const Color cream = Color(0xFFF7EEE2);
+  static const Color creamLight = Color(0xFFFFFBF5);
+  static const Color sand = Color(0xFFE9D5B8);
+  static const Color creamShadow = Color(0x2FD5BEA6);
 
-  // --- Accents -------------------------------------------------------------
-  /// Hibiscus petal.
-  static const Color hibiscus = Color(0xFFEF7E6B);
-  static const Color hibiscusDeep = Color(0xFFD75F4C);
-  static const Color hibiscusSoft = Color(0xFFFBE0DA);
-  /// Plumeria lei.
-  static const Color lei = Color(0xFFF6C95C);
-  static const Color leiSoft = Color(0xFFFDF0CE);
-  /// Leaf crown.
-  static const Color leaf = Color(0xFF6FA35C);
-  static const Color leafDeep = Color(0xFF4E7D42);
+  static const Color hibiscus = Color(0xFFF37A86);
+  static const Color hibiscusDeep = Color(0xFFE35C6D);
+  static const Color leaf = Color(0xFF7DC36A);
+  static const Color leafDeep = Color(0xFF539450);
   static const Color leafSoft = Color(0xFFE1EFD8);
+  static const Color lei = Color(0xFFFFD278);
 
   // --- Mascot body ---------------------------------------------------------
-  static const Color bodyLight = Color(0xFFDCEDDF);
-  static const Color bodyMid = Color(0xFFAFD4CD);
-  static const Color bodyDeep = Color(0xFF7FBDB6);
-  static const Color bodyShade = Color(0xFF5FA49E);
-  static const Color tattoo = Color(0xFF4E9C9C);
+  static const Color bodyLight = Color(0xFFE4F8DE);
+  static const Color bodyMid = Color(0xFFC2EDB2);
+  static const Color bodyDeep = Color(0xFFA3D88F);
+  static const Color bodyShade = Color(0xFF8BC47B);
+  static const Color tattoo = Color(0xFF55B6C0);
   static const Color blush = Color(0xFFF3A58E);
   static const Color eye = Color(0xFF16313B);
   static const Color eyeIris = Color(0xFF2E6E86);
 
   // --- Text ----------------------------------------------------------------
-  static const Color ink = Color(0xFF2F4A4A);
-  static const Color inkSoft = Color(0xFF6A8383);
-  static const Color inkFaint = Color(0xFF9DAFAF);
+  static const Color ink = Color(0xFF254547);
+  static const Color inkSoft = Color(0xFF557678);
+  static const Color inkFaint = Color(0xFF87A1A0);
 
-  // --- Sunset backdrop -----------------------------------------------------
-  static const List<Color> sunset = [
-    Color(0xFFFBE3C6), // high sky
-    Color(0xFFFAD3B4), // haze
-    Color(0xFFF6CBB2), // horizon glow
-    Color(0xFFCDE4DF), // sea
-    Color(0xFFEDD9BC), // sand
-  ];
+  // --- Scenic support ------------------------------------------------------
+  static const Color glass = Color(0xEFFFFAF3);
+  static const Color glassSoft = Color(0xD9FFFDF8);
+  static const Color sky = Color(0xFF7ED2F0);
+  static const Color ocean = Color(0xFF79CFD6);
 
   // --- Semantic ------------------------------------------------------------
   static const Color calm = Color(0xFF69B08A);
   static const Color caution = Color(0xFFE2A33F);
   static const Color alert = Color(0xFFD8604C);
 
-  /// Gauge sweep used on the Intention screen, low stress -> high stress.
   static const List<Color> gauge = [
     Color(0xFFD8604C),
     Color(0xFFE79350),
@@ -79,7 +57,6 @@ class WithMeColors {
   ];
 }
 
-/// Spacing, radius and elevation scale.
 class WithMeSpace {
   WithMeSpace._();
 
@@ -93,28 +70,26 @@ class WithMeSpace {
   static const double radiusSm = 12;
   static const double radiusMd = 18;
   static const double radiusLg = 24;
+  static const double radiusXl = 30;
   static const double radiusPill = 999;
 
-  /// Soft, warm card shadow — never a hard grey drop shadow.
   static const List<BoxShadow> cardShadow = [
     BoxShadow(
       color: WithMeColors.creamShadow,
       blurRadius: 18,
-      offset: Offset(0, 6),
+      offset: Offset(0, 8),
     ),
   ];
 
   static const List<BoxShadow> liftShadow = [
     BoxShadow(
-      color: Color(0x26000000),
+      color: Color(0x2A000000),
       blurRadius: 24,
       offset: Offset(0, 10),
     ),
   ];
 }
 
-/// Text styles. Uses the platform default family so the project stays
-/// dependency-free; swap `fontFamily` here if a brand face is licensed later.
 class WithMeText {
   WithMeText._();
 
@@ -133,12 +108,11 @@ class WithMeText {
     letterSpacing: 0.3,
   );
 
-  /// The question the companion asks — the loudest thing on most screens.
   static const TextStyle question = TextStyle(
     fontSize: 20,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w700,
     color: WithMeColors.ink,
-    height: 1.35,
+    height: 1.32,
   );
 
   static const TextStyle bubble = TextStyle(
@@ -151,7 +125,7 @@ class WithMeText {
   static const TextStyle title = TextStyle(
     fontSize: 22,
     fontWeight: FontWeight.w700,
-    color: WithMeColors.teal,
+    color: WithMeColors.tealDeep,
   );
 
   static const TextStyle option = TextStyle(
@@ -169,36 +143,32 @@ class WithMeText {
 
   static const TextStyle caption = TextStyle(
     fontSize: 12.5,
-    fontWeight: FontWeight.w500,
+    fontWeight: FontWeight.w600,
     color: WithMeColors.inkFaint,
     letterSpacing: 0.2,
   );
 
   static const TextStyle button = TextStyle(
     fontSize: 16,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w700,
     color: Colors.white,
     letterSpacing: 0.2,
   );
 
   static const TextStyle sectionLabel = TextStyle(
     fontSize: 11,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w800,
     color: WithMeColors.inkFaint,
-    letterSpacing: 1.1,
+    letterSpacing: 1.2,
   );
 }
 
-/// Motion constants. The companion should never feel snappy or mechanical —
-/// everything eases slowly, the way a calm person moves.
 class WithMeMotion {
   WithMeMotion._();
 
   static const Duration fast = Duration(milliseconds: 180);
   static const Duration medium = Duration(milliseconds: 320);
   static const Duration slow = Duration(milliseconds: 620);
-
-  /// One full breath cycle of the idle avatar.
   static const Duration breath = Duration(milliseconds: 3800);
 
   static const Curve ease = Curves.easeOutCubic;
@@ -206,18 +176,17 @@ class WithMeMotion {
   static const Curve pop = Curves.easeOutBack;
 }
 
-/// Builds the [ThemeData] applied to the With Me section of the app.
 ThemeData buildWithMeTheme() {
   final base = ThemeData.light(useMaterial3: true);
 
   return base.copyWith(
-    scaffoldBackgroundColor: WithMeColors.sand,
+    scaffoldBackgroundColor: Colors.transparent,
     colorScheme: base.colorScheme.copyWith(
       primary: WithMeColors.teal,
       onPrimary: Colors.white,
       secondary: WithMeColors.hibiscus,
       onSecondary: Colors.white,
-      surface: WithMeColors.cream,
+      surface: WithMeColors.creamLight,
       onSurface: WithMeColors.ink,
     ),
     splashFactory: InkSparkle.splashFactory,
@@ -230,7 +199,7 @@ ThemeData buildWithMeTheme() {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       centerTitle: true,
-      iconTheme: IconThemeData(color: WithMeColors.teal),
+      iconTheme: IconThemeData(color: WithMeColors.tealDeep),
       titleTextStyle: WithMeText.title,
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(

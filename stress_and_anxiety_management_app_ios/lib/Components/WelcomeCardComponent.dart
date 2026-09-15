@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../Database/LocalDatabase.dart';
+import '../WithMe/Theme/WithMeTheme.dart';
 
 class WelcomeCard extends StatelessWidget {
   final double fontSize;
@@ -18,21 +20,23 @@ class WelcomeCard extends StatelessWidget {
     return ValueListenableBuilder<String?>(
       valueListenable: dbHelper.userNameNotifier,
       builder: (context, userName, _) {
-        userName ??= "User";
-        return Card(
-          color: Colors.blueGrey[700],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+        final displayName = userName?.trim().isNotEmpty == true ? userName! : 'there';
+        return Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(
+            horizontal: padding,
+            vertical: padding * 0.9,
           ),
-          child: Padding(
-            padding: EdgeInsets.all(padding),
-            child: Text(
-              'Welcome $userName, what would you like to do?',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: fontSize,
-              ),
+          decoration: BoxDecoration(
+            color: WithMeColors.creamLight.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(WithMeSpace.radiusMd),
+            boxShadow: WithMeSpace.cardShadow,
+          ),
+          child: Text(
+            'Welcome $displayName. What would you like to focus on?',
+            textAlign: TextAlign.center,
+            style: WithMeText.question.copyWith(
+              fontSize: fontSize.clamp(17, 21).toDouble(),
             ),
           ),
         );

@@ -5,16 +5,10 @@ import 'package:flutter/material.dart';
 import '../Components/SpeechBubble.dart';
 import '../Components/WithMeBackdrop.dart';
 import '../Mascot/MascotExpression.dart';
-import '../Mascot/WithMeAvatar.dart';
 import '../Theme/WithMeTheme.dart';
 import 'CheckInScreen.dart';
 import 'CompanionChatScreen.dart';
 
-/// Storyboard 2 — Greeting.
-///
-/// The companion introduces itself, then offers the two ways in: speak, or
-/// start the guided check-in. The mic is presentational for now; wiring speech
-/// input is out of scope for this UI pass.
 class WithMeGreetingScreen extends StatefulWidget {
   const WithMeGreetingScreen({super.key});
 
@@ -31,9 +25,10 @@ class _WithMeGreetingScreenState extends State<WithMeGreetingScreen> {
       data: buildWithMeTheme(),
       child: Scaffold(
         body: WithMeBackdrop(
+          expression: MascotExpression.happy,
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: WithMeSpace.xl),
+              padding: const EdgeInsets.symmetric(horizontal: WithMeSpace.lg),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   return SingleChildScrollView(
@@ -43,35 +38,69 @@ class _WithMeGreetingScreenState extends State<WithMeGreetingScreen> {
                       child: IntrinsicHeight(
                         child: Column(
                           children: [
-                            const SizedBox(height: WithMeSpace.xl),
+                            const SizedBox(height: WithMeSpace.sm),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: WithMeSpace.md,
+                                vertical: WithMeSpace.sm,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.34),
+                                borderRadius:
+                                    BorderRadius.circular(WithMeSpace.radiusPill),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.55),
+                                ),
+                              ),
+                              child: Text(
+                                'WITH ME COMPANION',
+                                textAlign: TextAlign.center,
+                                style: WithMeText.sectionLabel.copyWith(
+                                  color: WithMeColors.tealDeep,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: WithMeSpace.lg),
                             SpeechBubble(
                               text:
                                   "Hi!\nI'm here with you.\nHow are you feeling today?",
                               typewriter: true,
+                              maxWidth: constraints.maxWidth,
                               onFinished: () {
                                 if (mounted) setState(() => _speaking = false);
                               },
                             ),
                             const Spacer(),
-                            WithMeAvatar(
-                              size: 200,
-                              speaking: _speaking,
-                              expression: _speaking
-                                  ? MascotExpression.happy
-                                  : MascotExpression.listening,
+                            _TapToTalk(
+                                onTap: () => _openChat(context),
+                                speaking: _speaking),
+                            const SizedBox(height: WithMeSpace.sm),
+                            Text(
+                              'Tap to talk',
+                              style: WithMeText.body.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: WithMeColors.ink,
+                              ),
                             ),
-                            const SizedBox(height: WithMeSpace.lg),
-                            _TapToTalk(onTap: () => _openChat(context)),
-                            const SizedBox(height: WithMeSpace.md),
-                            Text('Tap to talk', style: WithMeText.body),
-                            const SizedBox(height: WithMeSpace.lg),
-                            TextButton(
-                              onPressed: () => _startCheckIn(context),
-                              child: Text(
-                                'Or walk me through a check-in  →',
-                                style: WithMeText.option.copyWith(
-                                  color: WithMeColors.teal,
-                                  fontWeight: FontWeight.w600,
+                            const SizedBox(height: WithMeSpace.sm),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(WithMeSpace.md),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.58),
+                                borderRadius:
+                                    BorderRadius.circular(WithMeSpace.radiusLg),
+                                boxShadow: WithMeSpace.cardShadow,
+                              ),
+                              child: TextButton(
+                                onPressed: () => _startCheckIn(context),
+                                child: Text(
+                                  'Or walk me through a check-in  →',
+                                  style: WithMeText.option.copyWith(
+                                    color: WithMeColors.teal,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ),
@@ -99,11 +128,11 @@ class _WithMeGreetingScreenState extends State<WithMeGreetingScreen> {
       );
 }
 
-/// The teal mic button with a slow pulse ring, inviting the user to speak.
 class _TapToTalk extends StatefulWidget {
-  const _TapToTalk({required this.onTap});
+  const _TapToTalk({required this.onTap, required this.speaking});
 
   final VoidCallback onTap;
+  final bool speaking;
 
   @override
   State<_TapToTalk> createState() => _TapToTalkState();
@@ -130,30 +159,32 @@ class _TapToTalkState extends State<_TapToTalk>
       child: GestureDetector(
         onTap: widget.onTap,
         child: SizedBox(
-          width: 110,
-          height: 110,
+          width: 124,
+          height: 124,
           child: AnimatedBuilder(
             animation: _pulse,
             builder: (context, child) {
               return Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Two rings, offset in phase, expanding and fading outward.
-                  for (var i = 0; i < 2; i++)
-                    _ring((_pulse.value + i * 0.5) % 1.0),
+                  for (var i = 0; i < 2; i++) _ring((_pulse.value + i * 0.5) % 1.0),
                   child!,
                 ],
               );
             },
             child: Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: WithMeColors.teal,
                 boxShadow: WithMeSpace.liftShadow,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.72),
+                  width: 2,
+                ),
               ),
-              child: const Icon(Icons.mic_rounded, color: Colors.white, size: 30),
+              child: const Icon(Icons.mic_rounded, color: Colors.white, size: 32),
             ),
           ),
         ),
@@ -164,12 +195,12 @@ class _TapToTalkState extends State<_TapToTalk>
   Widget _ring(double t) {
     final eased = math.pow(t, 0.7).toDouble();
     return Container(
-      width: 64 + eased * 46,
-      height: 64 + eased * 46,
+      width: 72 + eased * 52,
+      height: 72 + eased * 52,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: WithMeColors.teal.withValues(alpha: (1 - t) * 0.45),
+          color: Colors.white.withValues(alpha: (1 - t) * 0.42),
           width: 2,
         ),
       ),

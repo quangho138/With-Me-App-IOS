@@ -491,6 +491,7 @@ class MascotPainter extends CustomPainter {
     // Only the states that need them get brows; the resting face is bare,
     // which is what keeps it looking soft.
     if (expression != MascotExpression.concerned &&
+        expression != MascotExpression.sad &&
         expression != MascotExpression.thinking) {
       return;
     }
@@ -505,6 +506,10 @@ class MascotPainter extends CustomPainter {
       // Inner ends lift — the universal "worried" shape.
       canvas.drawLine(const Offset(60, 74), const Offset(86, 68), paint);
       canvas.drawLine(const Offset(140, 74), const Offset(114, 68), paint);
+    } else if (expression == MascotExpression.sad) {
+      // Sadness reads better with brows that slope upward toward the centre.
+      canvas.drawLine(const Offset(60, 70), const Offset(86, 76), paint);
+      canvas.drawLine(const Offset(140, 70), const Offset(114, 76), paint);
     } else {
       // Thinking: one brow raised.
       canvas.drawLine(const Offset(60, 72), const Offset(86, 74), paint);
@@ -541,6 +546,16 @@ class MascotPainter extends CustomPainter {
           Path()
             ..moveTo(cx - 11, cy + 4)
             ..quadraticBezierTo(cx, cy - 2, cx + 11, cy + 4),
+          paint,
+        );
+        break;
+
+      case MascotExpression.sad:
+        // A clearer frown used after a negative option is chosen.
+        canvas.drawPath(
+          Path()
+            ..moveTo(cx - 13, cy + 7)
+            ..quadraticBezierTo(cx, cy - 3, cx + 13, cy + 7),
           paint,
         );
         break;
