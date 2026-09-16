@@ -24,6 +24,7 @@ class ActionPlanScreen extends StatelessWidget {
       data: buildWithMeTheme(),
       child: Scaffold(
         body: WithMeBackdrop(
+          expression: MascotExpression.celebrating,
           child: SafeArea(
             child: Column(
               children: [
@@ -107,7 +108,8 @@ class ActionPlanScreen extends StatelessWidget {
                             label: "Let's do this!",
                             icon: Icons.favorite_rounded,
                             onPressed: () => Navigator.of(context)
-                                .popUntil((r) => r.isFirst),
+                                .pushNamedAndRemoveUntil(
+                                    '/home', (route) => false),
                           ),
                         ),
                       ),

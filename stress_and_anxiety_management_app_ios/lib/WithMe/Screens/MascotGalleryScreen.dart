@@ -29,6 +29,7 @@ class _MascotGalleryScreenState extends State<MascotGalleryScreen> {
     MascotExpression.happy: "Hi! I'm here with you.",
     MascotExpression.listening: "I'm listening. Take your time.",
     MascotExpression.thinking: "Let me think about what you said…",
+    MascotExpression.sad: "I can tell this feels heavy right now.",
     MascotExpression.encouraging: "You've got this. One small step.",
     MascotExpression.celebrating: "You did it! That's real progress.",
     MascotExpression.concerned: "That sounds hard. You're not alone in it.",
@@ -40,6 +41,8 @@ class _MascotGalleryScreenState extends State<MascotGalleryScreen> {
       data: buildWithMeTheme(),
       child: Scaffold(
         body: WithMeBackdrop(
+          expression: _selected,
+          speaking: _speaking,
           child: SafeArea(
             child: Column(
               children: [

@@ -4,11 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../Theme/WithMeTheme.dart';
 
-/// The 1–5 rating row used for Stress Level and Motivation.
-///
-/// The scale is the heart of the Stressing Anxiety framework, so it gets
-/// generous tap targets (48 px) and a clear selected state rather than a
-/// slider the user has to aim at.
 class ScaleSelector extends StatelessWidget {
   const ScaleSelector({
     super.key,
@@ -31,17 +26,17 @@ class ScaleSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: WithMeSpace.md,
+          runSpacing: WithMeSpace.md,
           children: [
-            for (var i = min; i <= max; i++) ...[
+            for (var i = min; i <= max; i++)
               _ScalePill(
                 number: i,
                 selected: value == i,
                 onTap: () => onChanged(i),
               ),
-              if (i != max) const SizedBox(width: WithMeSpace.md),
-            ],
           ],
         ),
         if (lowLabel != null || highLabel != null) ...[
@@ -84,26 +79,28 @@ class _ScalePill extends StatelessWidget {
         child: AnimatedContainer(
           duration: WithMeMotion.fast,
           curve: WithMeMotion.pop,
-          width: 48,
-          height: 48,
+          width: 54,
+          height: 54,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: selected ? WithMeColors.teal : WithMeColors.creamLight,
+            color: selected
+                ? WithMeColors.teal
+                : Colors.white.withValues(alpha: 0.86),
             border: Border.all(
               color: selected
-                  ? WithMeColors.teal
-                  : WithMeColors.teal.withValues(alpha: 0.22),
+                  ? Colors.white.withValues(alpha: 0.88)
+                  : WithMeColors.teal.withValues(alpha: 0.26),
               width: 1.6,
             ),
-            boxShadow: selected ? WithMeSpace.cardShadow : null,
+            boxShadow: WithMeSpace.cardShadow,
           ),
           child: Text(
             '$number',
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : WithMeColors.teal,
+              color: selected ? Colors.white : WithMeColors.tealDeep,
             ),
           ),
         ),
@@ -112,10 +109,6 @@ class _ScalePill extends StatelessWidget {
   }
 }
 
-/// One selectable answer: a tinted icon chip, a label, and a check when chosen.
-///
-/// Used by the Body / Feelings / Mind / Behavior / Intention / Options screens,
-/// all of which are the same list pattern with different content.
 class OptionTile extends StatelessWidget {
   const OptionTile({
     super.key,
@@ -144,39 +137,47 @@ class OptionTile extends StatelessWidget {
         child: AnimatedContainer(
           duration: WithMeMotion.fast,
           margin: const EdgeInsets.only(bottom: WithMeSpace.sm),
+          constraints: const BoxConstraints(minHeight: 64),
           padding: const EdgeInsets.symmetric(
             horizontal: WithMeSpace.md,
-            vertical: 11,
+            vertical: WithMeSpace.sm,
           ),
           decoration: BoxDecoration(
             color: selected
                 ? color.withValues(alpha: 0.16)
-                : WithMeColors.creamLight.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(WithMeSpace.radiusSm),
+                : Colors.white.withValues(alpha: 0.82),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected ? color : Colors.transparent,
+              color: selected ? color : Colors.white.withValues(alpha: 0.7),
               width: 1.6,
             ),
-            boxShadow: selected ? null : WithMeSpace.cardShadow,
+            boxShadow: WithMeSpace.cardShadow,
           ),
           child: Row(
             children: [
               Container(
-                width: 34,
-                height: 34,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.16),
+                  color: color.withValues(alpha: 0.14),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 19, color: color),
+                child: Icon(icon, size: 20, color: color),
               ),
               const SizedBox(width: WithMeSpace.md),
-              Expanded(child: Text(label, style: WithMeText.option)),
+              Expanded(
+                child: Text(
+                  label,
+                  style: WithMeText.option.copyWith(
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ),
               AnimatedScale(
                 duration: WithMeMotion.fast,
                 curve: WithMeMotion.pop,
                 scale: selected ? 1 : 0,
-                child: Icon(Icons.check_circle_rounded, size: 20, color: color),
+                child: Icon(Icons.check_circle_rounded, size: 21, color: color),
               ),
             ],
           ),
@@ -186,7 +187,6 @@ class OptionTile extends StatelessWidget {
   }
 }
 
-/// The 2×2 life-area grid (Home / Work / School / Social).
 class OptionGridCard extends StatelessWidget {
   const OptionGridCard({
     super.key,
@@ -216,22 +216,27 @@ class OptionGridCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected
                 ? tint.withValues(alpha: 0.18)
-                : WithMeColors.creamLight.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(WithMeSpace.radiusMd),
+                : Colors.white.withValues(alpha: 0.82),
+            borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: selected ? tint : Colors.transparent,
+              color: selected ? tint : Colors.white.withValues(alpha: 0.7),
               width: 1.8,
             ),
-            boxShadow: selected ? null : WithMeSpace.cardShadow,
+            boxShadow: WithMeSpace.cardShadow,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 30, color: tint),
               const SizedBox(height: WithMeSpace.sm),
-              Text(
-                label,
-                style: WithMeText.option.copyWith(fontWeight: FontWeight.w600),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: WithMeSpace.sm),
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: WithMeText.option.copyWith(fontWeight: FontWeight.w700),
+                ),
               ),
             ],
           ),
@@ -241,7 +246,6 @@ class OptionGridCard extends StatelessWidget {
   }
 }
 
-/// The primary teal pill button at the foot of every step.
 class WithMeButton extends StatelessWidget {
   const WithMeButton({
     super.key,
@@ -263,13 +267,16 @@ class WithMeButton extends StatelessWidget {
     if (!filled) {
       return SizedBox(
         width: double.infinity,
-        height: 52,
+        height: 54,
         child: OutlinedButton(
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: WithMeColors.teal, width: 1.6),
+            side: BorderSide(
+              color: WithMeColors.teal.withValues(alpha: 0.65),
+              width: 1.6,
+            ),
             foregroundColor: WithMeColors.teal,
-            backgroundColor: WithMeColors.creamLight.withValues(alpha: 0.9),
+            backgroundColor: Colors.white.withValues(alpha: 0.72),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(WithMeSpace.radiusPill),
             ),
@@ -287,7 +294,7 @@ class WithMeButton extends StatelessWidget {
       opacity: enabled ? 1 : 0.45,
       child: SizedBox(
         width: double.infinity,
-        height: 54,
+        height: 56,
         child: ElevatedButton(
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
@@ -315,11 +322,9 @@ class WithMeButton extends StatelessWidget {
   }
 }
 
-/// The semicircular intention gauge from the concept board.
 class IntentionGauge extends StatelessWidget {
   const IntentionGauge({super.key, required this.value, this.size = 170});
 
-  /// 0 = struggling, 1 = in control.
   final double value;
   final double size;
 
@@ -351,7 +356,6 @@ class _GaugePainter extends CustomPainter {
     final radius = size.width / 2 - 10;
     final rect = Rect.fromCircle(center: centre, radius: radius);
 
-    // Coloured sweep from alert red through to calm green.
     canvas.drawArc(
       rect,
       math.pi,
@@ -368,7 +372,6 @@ class _GaugePainter extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    // Needle.
     final angle = math.pi + math.pi * value;
     final tip = Offset(
       centre.dx + math.cos(angle) * (radius - 16),
@@ -390,7 +393,6 @@ class _GaugePainter extends CustomPainter {
   bool shouldRepaint(covariant _GaugePainter old) => old.value != value;
 }
 
-/// The slim step counter shown under the app bar during a check-in.
 class StepDots extends StatelessWidget {
   const StepDots({super.key, required this.count, required this.index});
 
@@ -412,7 +414,7 @@ class StepDots extends StatelessWidget {
             decoration: BoxDecoration(
               color: i <= index
                   ? WithMeColors.teal
-                  : WithMeColors.teal.withValues(alpha: 0.22),
+                  : Colors.white.withValues(alpha: 0.72),
               borderRadius: BorderRadius.circular(WithMeSpace.radiusPill),
             ),
           ),

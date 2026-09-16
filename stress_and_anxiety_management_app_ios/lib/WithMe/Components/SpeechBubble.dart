@@ -2,13 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../Theme/WithMeTheme.dart';
 
-/// Which edge the bubble's tail points from.
 enum BubbleTail { bottom, bottomLeft, left, none }
 
-/// The cream speech bubble the companion talks through.
-///
-/// Text is revealed a character at a time when [typewriter] is set, which is
-/// what makes the companion feel like it is speaking rather than pasting.
 class SpeechBubble extends StatefulWidget {
   const SpeechBubble({
     super.key,
@@ -22,14 +17,9 @@ class SpeechBubble extends StatefulWidget {
 
   final String text;
   final BubbleTail tail;
-
-  /// Reveal the text progressively instead of all at once.
   final bool typewriter;
-
   final double maxWidth;
   final TextStyle? style;
-
-  /// Fires once the full text is on screen.
   final VoidCallback? onFinished;
 
   @override
@@ -51,9 +41,7 @@ class _SpeechBubbleState extends State<SpeechBubble>
       _reveal.forward();
     } else {
       _reveal.value = 1;
-      // Let the caller know immediately; the text is already complete.
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => widget.onFinished?.call());
+      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onFinished?.call());
     }
   }
 
@@ -72,7 +60,6 @@ class _SpeechBubbleState extends State<SpeechBubble>
     }
   }
 
-  /// Roughly 28 ms a character, floored so short lines still read as spoken.
   Duration _durationFor(String text) =>
       Duration(milliseconds: (text.length * 28).clamp(400, 6000));
 
@@ -122,7 +109,6 @@ class _BubblePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // The tail eats into the padded box, so the rounded body stops short of it.
     final bodyHeight = switch (tail) {
       BubbleTail.bottom || BubbleTail.bottomLeft => size.height - 10,
       _ => size.height,
@@ -165,12 +151,15 @@ class _BubblePainter extends CustomPainter {
         break;
     }
 
-    canvas.drawShadow(path, WithMeColors.creamShadow, 5, true);
-    canvas.drawPath(path, Paint()..color = WithMeColors.creamLight);
+    canvas.drawShadow(path, WithMeColors.creamShadow, 7, true);
+    canvas.drawPath(
+      path,
+      Paint()..color = WithMeColors.glass,
+    );
     canvas.drawPath(
       path,
       Paint()
-        ..color = WithMeColors.lei.withValues(alpha: 0.30)
+        ..color = Colors.white.withValues(alpha: 0.82)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.2,
     );

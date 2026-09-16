@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// NavBar is a reusable AppBar widget that includes a menu button
-/// which opens the Drawer from a given Scaffold key.
-/// It implements PreferredSizeWidget to specify the AppBar height.
+import '../WithMe/Theme/WithMeTheme.dart';
+
+/// Top navigation styled to match the warm "With Me" visual language.
 class NavBar extends StatelessWidget implements PreferredSizeWidget {
-  // The GlobalKey of the Scaffold that this NavBar controls.
-  // This key is used to open the Drawer when the menu button is pressed.
   final GlobalKey<ScaffoldState> scaffoldKey;
 
   const NavBar({super.key, required this.scaffoldKey});
@@ -13,22 +11,35 @@ class NavBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: const Color(0xFF546E7A), // Dark blue-grey background
-      title: const Text(
-        'HOWRU.LIFE', // AppBar title text
-        style: TextStyle(color: Colors.white), // White title for contrast
+      backgroundColor: WithMeColors.creamLight.withValues(alpha: 0.94),
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: true,
+      title: Text(
+        'HOWRU.LIFE',
+        style: WithMeText.sectionLabel.copyWith(
+          color: WithMeColors.teal,
+          fontSize: 12,
+          letterSpacing: 1.5,
+        ),
       ),
       leading: IconButton(
-        icon:
-            const Icon(Icons.menu, color: Colors.white), // Hamburger menu icon
+        tooltip: 'Menu',
+        icon: const Icon(Icons.menu_rounded, color: WithMeColors.teal),
         onPressed: () => scaffoldKey.currentState?.openDrawer(),
-        // Opens the Drawer when pressed using the provided scaffoldKey
+      ),
+      actions: const [SizedBox(width: 48)],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(
+          height: 1,
+          color: WithMeColors.teal.withValues(alpha: 0.08),
+        ),
       ),
     );
   }
 
-  // Required property for PreferredSizeWidget to tell Flutter
-  // how tall the AppBar should be
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 1);
 }

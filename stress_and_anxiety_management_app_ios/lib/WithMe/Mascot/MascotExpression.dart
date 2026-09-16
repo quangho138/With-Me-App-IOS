@@ -1,9 +1,8 @@
 /// The emotional states the With Me companion can hold.
 ///
-/// The first five map one-to-one onto the expression strip on the product
-/// owners' concept board (Happy / Listening / Thinking / Encouraging /
-/// Celebrating). [idle] is the resting state between beats and [concerned]
-/// is reserved for the safety layer, where a cheerful face would be wrong.
+/// The main set maps to the companion moods the UI uses while the user checks
+/// in. [sad] is used for heavier emotions selected in the form, while
+/// [concerned] stays available for gentle concern and future safety moments.
 enum MascotExpression {
   /// Resting. Soft smile, slow breathing, occasional blink.
   idle,
@@ -16,6 +15,9 @@ enum MascotExpression {
 
   /// Working something out. Eyes glance up, thought dots drift overhead.
   thinking,
+
+  /// A gentler downcast mood for sad / low-energy selections.
+  sad,
 
   /// Cheering the user on. Wink, raised arm waving.
   encouraging,
@@ -34,6 +36,7 @@ extension MascotExpressionInfo on MascotExpression {
         MascotExpression.happy => 'Happy',
         MascotExpression.listening => 'Listening',
         MascotExpression.thinking => 'Thinking',
+        MascotExpression.sad => 'Sad',
         MascotExpression.encouraging => 'Encouraging',
         MascotExpression.celebrating => 'Celebrating',
         MascotExpression.concerned => 'Concerned',
