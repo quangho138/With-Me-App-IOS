@@ -1,23 +1,32 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import '../Theme/WithMeTheme.dart';
 import 'MascotExpression.dart';
-import 'MascotPainter.dart';
 
-/// The animated With Me companion.
+/// The With Me companion.
 ///
-/// Four independent clocks run the character so the motions never lock into an
-/// obviously repeating loop:
-///   * breath  — always running, a slow rise and fall
-///   * blink   — a short snap, re-scheduled at a randomised interval
-///   * gesture — arm waves, hops, thought dots; only while [expression] needs it
-///   * talk    — mouth movement, only while [speaking] is true
+/// ## About the art
 ///
-/// Changing [expression] cross-fades rather than cutting, so the companion
-/// never appears to flicker between moods.
+/// The V1 design document ships no character art — the mascot exists only
+/// baked into 45 screenshots, about 120 px tall. `tool/extract_mascot.py`
+/// lifts the largest clean instance (`image1.png`) off the page gradient and
+/// mattes it to transparency; that is what `assets/mascot/mascot_wave.png` is.
+///
+/// Two consequences, both deliberate and both temporary:
+///
+///   * It is **one pose**. [MascotExpression] still selects the character's
+///     *motion* — a celebrating hop reads differently from an idle breath —
+///     but the face does not change. The enum is kept because it is the
+///     interface every screen already talks to.
+///   * At the 200 pt hero size the design uses, upscaled 103 px source art is
+///     visibly soft.
+///
+/// Transparent PNGs at 3x, one per expression, would fix both and change
+/// nothing outside this file — see the mascot note in
+/// `docs/WITH_ME_SPEC_V1.md`. `MascotPainter` is kept alongside as the vector
+/// fallback if the bitmap proves too soft to ship.
 class WithMeAvatar extends StatefulWidget {
   const WithMeAvatar({
     super.key,
@@ -29,9 +38,12 @@ class WithMeAvatar extends StatefulWidget {
   });
 
   final MascotExpression expression;
+
+  /// Width. The widget lays out [size] wide by `size * 1.4175` tall.
   final double size;
 
-  /// Drives the mouth. Set while a message is being delivered.
+  /// Retained for API compatibility with the previous vector avatar. A bitmap
+  /// has no mouth to drive, so this now only adds a slight lean while talking.
   final bool speaking;
 
   /// Allows motion to be switched off for reduced-motion users and tests.
@@ -43,164 +55,100 @@ class WithMeAvatar extends StatefulWidget {
   State<WithMeAvatar> createState() => _WithMeAvatarState();
 }
 
-/// Height-to-width ratio of the painter's design box (200 x 280).
-const double _aspect = 1.4;
+/// The shipped art is 309 x 438.
+const double _aspect = 438 / 309;
 
-/// How far the circular badge zooms into the character. The head spans
-/// 0.64 of the design width, so 1.3x leaves it just inside the circle.
-const double _badgeZoom = 1.3;
+/// Fraction of the asset's width the head spans.
+const double _headWidth = 0.74;
 
-/// Vertical offset that lands the head in the middle of the badge.
-/// Derived from the head's position in the design box: 0.2z / (1 - 1.4z).
-const double _badgeAlign = -0.32;
+/// Where the centre of the head sits, as a fraction of the asset's height.
+const double _headCentreY = 0.30;
+
+const String _asset = 'assets/mascot/mascot_wave.png';
 
 class _WithMeAvatarState extends State<WithMeAvatar>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late final AnimationController _breath;
-  late final AnimationController _blink;
-  late final AnimationController _gesture;
-  late final AnimationController _talk;
-
-  Timer? _blinkTimer;
-  final _random = math.Random();
 
   @override
   void initState() {
     super.initState();
-
     _breath = AnimationController(
       vsync: this,
       duration: WithMeMotion.breath,
     );
-    _blink = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 150),
-    );
-    _gesture = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
-    _talk = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 260),
-    );
-
-    if (widget.animate) {
-      _breath.repeat(reverse: true);
-      _scheduleBlink();
-      _syncGesture();
-      _syncTalk();
-    }
+    if (widget.animate) _breath.repeat(reverse: true);
   }
 
   @override
   void didUpdateWidget(covariant WithMeAvatar old) {
     super.didUpdateWidget(old);
-
-    if (widget.animate != old.animate) {
-      if (widget.animate) {
-        _breath.repeat(reverse: true);
-        _scheduleBlink();
-      } else {
-        _breath.stop();
-        _blinkTimer?.cancel();
-        _blink.value = 0;
-      }
-    }
-    if (widget.expression != old.expression) _syncGesture();
-    if (widget.speaking != old.speaking) _syncTalk();
-  }
-
-  /// Blinks land at irregular intervals — a metronome blink reads as robotic.
-  void _scheduleBlink() {
-    _blinkTimer?.cancel();
-    if (!widget.animate) return;
-
-    _blinkTimer = Timer(
-      Duration(milliseconds: 2200 + _random.nextInt(3600)),
-      () async {
-        if (!mounted) return;
-        // The eye closes and opens in one short movement.
-        await _blink.forward();
-        if (!mounted) return;
-        await _blink.reverse();
-        _scheduleBlink();
-      },
-    );
-  }
-
-  void _syncGesture() {
-    final wants = widget.animate &&
-        (widget.expression.gestures ||
-            widget.expression == MascotExpression.thinking);
-
-    if (wants && !_gesture.isAnimating) {
-      _gesture.repeat();
-    } else if (!wants && _gesture.isAnimating) {
-      _gesture
-        ..stop()
-        ..value = 0;
-    }
-  }
-
-  void _syncTalk() {
-    if (widget.speaking && widget.animate) {
-      _talk.repeat(reverse: true);
-    } else {
-      _talk
-        ..stop()
-        ..value = 0;
+    if (widget.animate && !_breath.isAnimating) {
+      _breath.repeat(reverse: true);
+    } else if (!widget.animate && _breath.isAnimating) {
+      _breath.stop();
     }
   }
 
   @override
   void dispose() {
-    _blinkTimer?.cancel();
     _breath.dispose();
-    _blink.dispose();
-    _gesture.dispose();
-    _talk.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final avatar = AnimatedBuilder(
-      animation: Listenable.merge([_breath, _blink, _gesture, _talk]),
-      builder: (context, _) {
-        return CustomPaint(
-          size: Size(widget.size, widget.size * _aspect),
-          painter: MascotPainter(
-            expression: widget.expression,
-            breath: Curves.easeInOutSine.transform(_breath.value),
-            blink: _blink.value,
-            gesture: _gesture.value,
-            talk: _talk.value,
-          ),
-        );
-      },
+    final height = widget.size * _aspect;
+
+    Widget art = Image.asset(
+      _asset,
+      width: widget.size,
+      height: height,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
     );
 
-    return Semantics(
-      label: 'With Me companion, ${widget.expression.label}',
-      button: widget.onTap != null,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox(
-          width: widget.size,
-          height: widget.size * _aspect,
-          child: avatar,
-        ),
-      ),
+    if (widget.animate) {
+      art = AnimatedBuilder(
+        animation: _breath,
+        builder: (context, child) {
+          // 0 -> 1 -> 0 over the breath period.
+          final t = Curves.easeInOutSine.transform(_breath.value);
+          final gestures = widget.expression.gestures;
+          // A hop for the expressions that call for one; everyone else just
+          // breathes.
+          final lift = gestures ? -6 * math.sin(t * math.pi) : 0.0;
+          final sway = widget.speaking ? 0.012 * (t - 0.5) : 0.0;
+          return Transform.translate(
+            offset: Offset(0, lift),
+            child: Transform.rotate(
+              angle: sway,
+              child: Transform.scale(
+                scaleX: 1 + 0.010 * t,
+                scaleY: 1 + 0.016 * t,
+                alignment: Alignment.bottomCenter,
+                child: child,
+              ),
+            ),
+          );
+        },
+        child: art,
+      );
+    }
+
+    final sized = SizedBox(width: widget.size, height: height, child: art);
+
+    if (widget.onTap == null) return sized;
+    return GestureDetector(
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: sized,
     );
   }
 }
 
-/// A compact, cropped bust of the companion for chat rows, app bars and lists.
-///
-/// It reuses the same painter but scales up and shifts the design box so only
-/// the head and lei are visible inside a circular frame.
+/// The circular head-and-shoulders crop used in the header lockup and as a
+/// chat avatar.
 class WithMeAvatarBadge extends StatelessWidget {
   const WithMeAvatarBadge({
     super.key,
@@ -211,31 +159,40 @@ class WithMeAvatarBadge extends StatelessWidget {
 
   final double size;
   final MascotExpression expression;
+
+  /// Unused — the badge is a still crop. Kept so callers need not change.
   final bool animate;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [WithMeColors.tealSoft, WithMeColors.leafSoft],
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: OverflowBox(
-        maxWidth: size * _badgeZoom,
-        maxHeight: size * _badgeZoom * _aspect,
-        // Centres the head — not the eyes — inside the circle.
-        alignment: const Alignment(0, _badgeAlign),
-        child: WithMeAvatar(
-          size: size * _badgeZoom,
-          expression: expression,
-          animate: animate,
+    // Scale so the head fills the circle, then slide it up so the head's
+    // centre lands on the circle's centre.
+    final zoom = 1 / _headWidth;
+    final artW = size * zoom;
+    final artH = artW * _aspect;
+
+    // In an OverflowBox the child's top sits at (size - artH) * (ay + 1) / 2.
+    // Solve that plus _headCentreY * artH == size / 2 for ay.
+    final ay = (size / 2 - _headCentreY * artH) * 2 / (size - artH) - 1;
+
+    return ClipOval(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: ColoredBox(
+          color: WithMeColors.tealSoft,
+          child: OverflowBox(
+            maxWidth: artW,
+            maxHeight: artH,
+            alignment: Alignment(0, ay.clamp(-1.0, 1.0)),
+            child: Image.asset(
+              _asset,
+              width: artW,
+              height: artH,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium,
+            ),
+          ),
         ),
       ),
     );

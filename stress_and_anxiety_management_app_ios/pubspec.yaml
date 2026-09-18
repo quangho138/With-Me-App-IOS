@@ -67,6 +67,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/logo.png
+    - assets/mascot/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -80,17 +81,23 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
-  #
+  # Both faces are provisional - the design document names no fonts, so these
+  # were identified from the renders. See docs/WITH_ME_SPEC_V1.md. Quicksand is
+  # shipped as static instances cut from the upstream variable font.
+  fonts:
+    - family: Quicksand
+      fonts:
+        - asset: assets/fonts/Quicksand-400.ttf
+          weight: 400
+        - asset: assets/fonts/Quicksand-500.ttf
+          weight: 500
+        - asset: assets/fonts/Quicksand-600.ttf
+          weight: 600
+        - asset: assets/fonts/Quicksand-700.ttf
+          weight: 700
+    - family: Yellowtail
+      fonts:
+        - asset: assets/fonts/Yellowtail-Regular.ttf
+
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
