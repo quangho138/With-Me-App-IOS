@@ -225,14 +225,20 @@ class _BreathingScreenState extends State<BreathingScreen>
                   label: phase.$1,
                   seconds: _running ? _remaining : phase.$2,
                   showCount: box,
-                  progress: _running ? _phase.value : 0,
-                  expanding: phase.$1 == 'Inhale',
+                  progress: _phase.value,
+                  running: _running,
                 ),
               ),
             ),
           ),
           const SizedBox(height: WithMeSpace.lg),
-          _PhaseChips(phases: phases, active: _phaseIndex, twoUp: box),
+          _PhaseChips(
+            phases: phases,
+            // Nothing is the current phase until the exercise is running,
+            // which is the state both mockups are captured in.
+            active: _running ? _phaseIndex : -1,
+            twoUp: box,
+          ),
           if (box) ...[
             const SizedBox(height: WithMeSpace.md),
             Text(
@@ -299,7 +305,7 @@ class _BreathShape extends StatelessWidget {
     required this.seconds,
     required this.showCount,
     required this.progress,
-    required this.expanding,
+    required this.running,
   });
 
   final bool square;
@@ -310,16 +316,20 @@ class _BreathShape extends StatelessWidget {
   /// 0-1 through the current phase.
   final double progress;
 
-  final bool expanding;
+  final bool running;
 
   @override
   Widget build(BuildContext context) {
-    // Grow on the inhale, shrink on the exhale, hold steady otherwise.
-    final scale = switch (label) {
-      'Inhale' => 0.82 + 0.18 * progress,
-      'Exhale' => 1.0 - 0.18 * progress,
-      _ => expanding ? 1.0 : 0.92,
-    };
+    // Grow on the inhale, shrink on the exhale, hold steady otherwise. At
+    // rest the shape sits at full size — both mockups show it that way, and
+    // starting it small made the square two thirds of its measured 205.
+    final scale = !running
+        ? 1.0
+        : switch (label) {
+            'Inhale' => 0.82 + 0.18 * progress,
+            'Exhale' => 1.0 - 0.18 * progress,
+            _ => 1.0,
+          };
 
     // Measured off image27 and image29: the shape fills most of the content
     // column rather than sitting small in the middle.
@@ -342,13 +352,15 @@ class _BreathShape extends StatelessWidget {
               color: square ? WithMeColors.mint.withValues(alpha: 0.42) : null,
               gradient: square
                   ? null
+                  // Solid most of the way out, then a short fade — image27's
+                  // circle has a defined edge, not a wash.
                   : RadialGradient(
                       colors: [
-                        WithMeColors.mint.withValues(alpha: 0.55),
-                        WithMeColors.mint.withValues(alpha: 0.42),
+                        WithMeColors.mint.withValues(alpha: 0.58),
+                        WithMeColors.mint.withValues(alpha: 0.52),
                         WithMeColors.mint.withValues(alpha: 0.0),
                       ],
-                      stops: const [0, 0.72, 1],
+                      stops: const [0, 0.88, 1],
                     ),
               shape: square ? BoxShape.rectangle : BoxShape.circle,
               borderRadius: square ? BorderRadius.circular(28) : null,
