@@ -133,8 +133,9 @@ These are drawn because the design draws them, and they do nothing:
 
 ## Still open
 
-0. **Android is unverified** and iOS has never been built — see Platforms
-   above. Neither is possible from this machine in its current state.
+0. **iOS has never been built** — it needs macOS and Xcode, so it cannot be
+   done from this machine. Android builds; nothing has been run on a physical
+   device.
 1. **Strategy ratings have no table.** `LocalDatabase` covers reflections,
    moods, the control gauge and stressors. The strategies screen (`image21`)
    and the Strategies & Actions breakdown (`image34`) have nowhere to write,
@@ -154,7 +155,7 @@ These are drawn because the design draws them, and they do nothing:
 |---|---|
 | **Web (Chrome)** | Builds and runs. Every screen renders and navigates. **Cannot persist** — sqflite has no web implementation, so anything that writes fails. |
 | **iOS** | The real target. Cannot be built from Windows; needs macOS and Xcode. |
-| **Android** | Not verified — see below. |
+| **Android** | Builds. `flutter build apk --debug` produces a 157 MB debug APK with the fonts and mascot bundled. Not run on a device — none attached. |
 | **Windows desktop** | Needs the Visual Studio "Desktop development with C++" workload, which is not installed. |
 
 Because the browser cannot persist, every database call is now wrapped: a
@@ -163,18 +164,26 @@ failure shows a message and leaves the screen on its empty state. Before that,
 it. That guard matters on a real device too — a database that will not open
 should not trap the user.
 
-### Android is unverified, and needs a machine with disk space
+### What the Android build needed
 
 The project pinned Gradle 8.12, AGP 8.9.1 and Kotlin 2.1.0. Flutter 3.47.4
-requires at least 8.14.0, 8.11.1 and 2.2.20, so the Android build failed
-immediately on version checks — it could not have worked as delivered. Those
-three pins are bumped on this branch.
+requires at least 8.14.0, 8.11.1 and 2.2.20, so the build failed immediately on
+version checks — it could not have worked as delivered. All three are bumped on
+this branch.
 
-The build then failed again on `Problems writing to Binary store` and a failed
-NDK download. **The machine's C: drive has 799 MB free of 475 GB.** Gradle
-cannot write its cache or fetch the NDK in that space. The version bumps are
-therefore correct by the toolchain's own stated minimums but **not verified end
-to end** — re-run `flutter build apk --debug` once there is room.
+Flutter then warns that it will *soon* require Gradle 9.1.0, AGP 9.0.1 and
+Kotlin 2.3.20. The current versions build today; the next SDK bump will want
+those.
+
+**Watch the disk.** The C: drive on this machine runs at 99–100% full (3.6 GB
+free of 475 GB at the time of writing). The first build attempt ran out of
+space mid-way and left a truncated NDK at
+`%LOCALAPPDATA%\Android\sdk
+dk8.2.13676358` — an empty directory with
+only `.installer` in it. Every later attempt then failed with `[CXX1101] NDK …
+did not have a source.properties file`, which reads like an SDK problem rather
+than a disk one. Deleting that directory and rebuilding let the NDK download
+properly and the build went green. If it happens again, that is the fix.
 
 ## Running it
 
