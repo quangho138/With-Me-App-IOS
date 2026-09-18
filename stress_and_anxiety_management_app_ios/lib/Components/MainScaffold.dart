@@ -10,16 +10,26 @@ import 'NavBar.dart';
 class MainScaffold extends StatelessWidget {
   final Widget body;
   final String title;
+  // Screens can opt into back navigation without changing the default menu behavior.
+  final bool showBackButton;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  MainScaffold({super.key, required this.body, this.title = 'HOWRU.LIFE'});
+  MainScaffold({
+    super.key,
+    required this.body,
+    this.title = 'HOWRU.LIFE',
+    this.showBackButton = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: WithMeColors.sand,
-      appBar: NavBar(scaffoldKey: _scaffoldKey),
+      appBar: NavBar(
+        scaffoldKey: _scaffoldKey,
+        showBackButton: showBackButton,
+      ),
       drawer: Drawer(
         backgroundColor: WithMeColors.creamLight,
         surfaceTintColor: Colors.transparent,

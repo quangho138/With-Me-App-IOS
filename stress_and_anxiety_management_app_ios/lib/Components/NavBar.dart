@@ -5,8 +5,14 @@ import '../WithMe/Theme/WithMeTheme.dart';
 /// Top navigation styled to match the warm "With Me" visual language.
 class NavBar extends StatelessWidget implements PreferredSizeWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
+  // The shared bar remains a menu by default; child flows can request a back arrow.
+  final bool showBackButton;
 
-  const NavBar({super.key, required this.scaffoldKey});
+  const NavBar({
+    super.key,
+    required this.scaffoldKey,
+    this.showBackButton = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,9 +31,14 @@ class NavBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       leading: IconButton(
-        tooltip: 'Menu',
-        icon: const Icon(Icons.menu_rounded, color: WithMeColors.teal),
-        onPressed: () => scaffoldKey.currentState?.openDrawer(),
+        tooltip: showBackButton ? 'Back' : 'Menu',
+        icon: Icon(
+          showBackButton ? Icons.arrow_back_rounded : Icons.menu_rounded,
+          color: WithMeColors.teal,
+        ),
+        onPressed: showBackButton
+            ? () => Navigator.maybePop(context)
+            : () => scaffoldKey.currentState?.openDrawer(),
       ),
       actions: const [SizedBox(width: 48)],
       bottom: PreferredSize(

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math' as math;
-import 'BreathingExercisesSelectionScreen.dart';
+import 'BreathingExerciseType.dart';
+import '../WithMe/Theme/WithMeTheme.dart';
 
 class BreathingExerciseDetailScreen extends StatefulWidget {
   final BreathingExerciseType exerciseType;
@@ -23,7 +24,7 @@ class _BreathingExerciseDetailScreenState extends State<BreathingExerciseDetailS
   
   Timer? _cycleTimer;
   int _currentCycle = 0;
-  int _totalCycles = 5;
+  final int _totalCycles = 5;
   String _currentPhase = 'Ready';
   bool _isActive = false;
 
@@ -225,176 +226,98 @@ class _BreathingExerciseDetailScreenState extends State<BreathingExerciseDetailS
 
   @override
   Widget build(BuildContext context) {
+    // Detail screens reuse the reference palette while keeping the existing breathing animation.
     return Scaffold(
-      backgroundColor: const Color(0xFF2F3941),
+      backgroundColor: WithMeColors.cream,
       appBar: AppBar(
-        title: Text(_exerciseConfig['title']),
-        backgroundColor: const Color(0xFF546E7A),
-        centerTitle: true,
-        titleTextStyle: const TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
+        backgroundColor: Colors.transparent,
+        title: const Text('With Me'),
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.maybePop(context),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              
-              // Instructions Card
-              Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [_exerciseConfig['color'], _exerciseConfig['color'].withOpacity(0.7)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        _exerciseConfig['icon'],
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _exerciseConfig['title'],
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _exerciseConfig['description'],
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _exerciseConfig['instructions'],
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 30),
-              
-              // Progress Indicator
-              AnimatedBuilder(
-                animation: _progressAnimation,
-                builder: (context, child) {
-                  return Column(
-                    children: [
-                      Text(
-                        'Cycle ${_currentCycle + 1} of $_totalCycles',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      LinearProgressIndicator(
-                        value: _progressAnimation.value,
-                        backgroundColor: Colors.grey[600],
-                        valueColor: AlwaysStoppedAnimation<Color>(_exerciseConfig['color']),
-                        minHeight: 8,
-                      ),
-                    ],
-                  );
-                },
-              ),
-              
-              const Spacer(),
-              
-              // Breathing Animation
-              _buildBreathingAnimation(),
-              
-              const Spacer(),
-              
-              // Control Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  if (!_isActive) ...[
-                    ElevatedButton.icon(
-                      onPressed: _startExercise,
-                      icon: const Icon(Icons.play_arrow, color: Colors.white),
-                      label: const Text(
-                        'Start Exercise',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _exerciseConfig['color'],
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ] else ...[
-                    ElevatedButton.icon(
-                      onPressed: _stopExercise,
-                      icon: const Icon(Icons.stop, color: Colors.white),
-                      label: const Text(
-                        'Stop',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFB00020),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              
-              const SizedBox(height: 20),
-            ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [WithMeColors.tealSoft, WithMeColors.sand],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+            child: Column(
+              children: [
+                Image.asset('assets/logo.png', width: 38, height: 38),
+                const SizedBox(height: 8),
+                Text(
+                  _exerciseConfig['title'],
+                  textAlign: TextAlign.center,
+                  style: WithMeText.title,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _exerciseConfig['instructions'],
+                  textAlign: TextAlign.center,
+                  style: WithMeText.body,
+                ),
+                const SizedBox(height: 18),
+                _buildProgressCard(),
+                const SizedBox(height: 18),
+                _buildBreathingAnimation(),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _isActive ? _stopExercise : _startExercise,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: WithMeColors.tealDeep,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(_isActive ? 'Stop' : 'Start'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: WithMeColors.creamLight,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Cycle ${_currentCycle + 1} of $_totalCycles',
+            style: WithMeText.caption.copyWith(color: WithMeColors.tealDeep),
+          ),
+          const SizedBox(height: 8),
+          AnimatedBuilder(
+            animation: _progressAnimation,
+            builder: (context, child) => LinearProgressIndicator(
+              value: _progressAnimation.value,
+              backgroundColor: WithMeColors.tealSoft,
+              valueColor: const AlwaysStoppedAnimation<Color>(WithMeColors.teal),
+              minHeight: 6,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -410,7 +333,7 @@ class _BreathingExerciseDetailScreenState extends State<BreathingExerciseDetailS
             Text(
               _currentPhase,
               style: const TextStyle(
-                color: Colors.white,
+                color: WithMeColors.tealDeep,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
@@ -420,7 +343,7 @@ class _BreathingExerciseDetailScreenState extends State<BreathingExerciseDetailS
               Text(
                 _getInstructionText(),
                 style: const TextStyle(
-                  color: Colors.white70,
+                  color: WithMeColors.inkSoft,
                   fontSize: 16,
                 ),
               ),
