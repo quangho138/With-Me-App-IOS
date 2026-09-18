@@ -1,5 +1,21 @@
 # With Me — AI Companion UI
 
+> **Superseded for the V1 design pass.** This file describes the first
+> companion build, made from the concept PDF (`FIU WITH ME.pdf`) as a
+> six-screen section bolted onto the legacy HOWRU.LIFE app.
+>
+> The app has since been rebuilt against
+> `WITH ME Complete App Design V1.docx` — 45 screens, the whole product. See
+> **`docs/WITH_ME_SPEC_V1.md`** for the measured spec and
+> **`docs/WITH_ME_V1_HANDOFF.md`** for what was built and what is still open.
+> The legacy screens, the six original companion screens, the beach backdrop
+> and the vector-painted mascot described below are all gone or replaced.
+>
+> Kept because it records why several decisions were made, and the three
+> blocking fixes to the delivered project (the misplaced `LocalDatabase.dart`,
+> the duplicate import path, and `main()` wiping the database on launch) still
+> apply.
+
 UI-only implementation of the "With Me" companion described in the product
 owners' spec (`FIU WITH ME.pdf`). No conversation engine, no persistence, no
 network calls — those plug in behind the seams noted below.

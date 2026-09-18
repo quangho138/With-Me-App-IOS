@@ -63,16 +63,20 @@ class WithMeScaffold extends StatelessWidget {
       children: [
         if (lockup) const _Lockup(),
         if (title != null) _Title(title!, onBack: onBack),
+        // Expanded either way, so the action stays pinned to the bottom: a
+        // Spacer beside a Flexible scroll view would split the free space
+        // between them and cut the content in half.
         if (child != null)
-          scrollable
-              ? Flexible(
-                  child: SingleChildScrollView(
+          Expanded(
+            child: scrollable
+                ? SingleChildScrollView(
                     padding: const EdgeInsets.only(bottom: WithMeSpace.lg),
                     child: child,
-                  ),
-                )
-              : Expanded(child: child!),
-        if (scrollable) const Spacer(),
+                  )
+                : child!,
+          )
+        else
+          const Spacer(),
         if (action != null) ...[
           const SizedBox(height: WithMeSpace.lg),
           action!,

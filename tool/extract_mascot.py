@@ -188,9 +188,22 @@ def fill_holes(alpha):
 def matte(screen, mask, box):
     """Crop to the mascot and build an alpha channel from the mask."""
     sub = screen.crop(box).convert("RGBA")
-    # Rebuild the mask over the crop without the chrome rule — see
-    # deviation_mask — then close what the threshold missed.
-    alpha = fill_holes(deviation_mask(screen.crop(box), skip_chrome=False))
+    # Rebuild the mask without the chrome rule — see deviation_mask — then
+    # close what the threshold missed.
+    #
+    # Build it over the WHOLE screen and crop afterwards: row_background reads
+    # the page gradient from the left and right edges, and inside a 103 px
+    # crop those edges are the mascot itself, which turns whole rows opaque.
+    mask = deviation_mask(screen, skip_chrome=False).crop(box)
+    # Close the mask before filling. The character's pale highlights - the top
+    # of the head especially - sit close enough to the page gradient to fall
+    # under the threshold, and they leak to the outside through the thin edge
+    # of the silhouette, so a plain flood leaves a hole through the head.
+    # Dilating first bridges those gaps; eroding afterwards puts the outline
+    # back where it was.
+    mask = mask.filter(ImageFilter.MaxFilter(7))
+    mask = fill_holes(mask)
+    alpha = mask.filter(ImageFilter.MinFilter(7))
     # Soften the 1 px staircase the threshold leaves behind.
     alpha = alpha.filter(ImageFilter.GaussianBlur(0.6))
     sub.putalpha(alpha)
