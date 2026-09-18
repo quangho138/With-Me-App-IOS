@@ -55,7 +55,7 @@ class RememberScreen extends StatelessWidget {
           const SizedBox(height: WithMeSpace.xl),
           const Center(
             child: WithMeAvatar(
-              size: 140,
+              size: 95,
               expression: MascotExpression.encouraging,
             ),
           ),

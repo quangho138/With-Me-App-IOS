@@ -40,10 +40,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final counts = <String, int>{};
     final today = DateTime.now();
 
-    for (var back = 0; back < 30; back++) {
-      final date = today.subtract(Duration(days: back));
-      final row = await _db.getStressor(date);
-      final category = row?['category'] as String?;
+    final rows = await _db.getStressorsBetween(
+      today.subtract(const Duration(days: 29)),
+      today,
+    );
+    for (final row in rows.values) {
+      final category = row['category'] as String?;
       if (category != null && category.isNotEmpty) {
         counts[category] = (counts[category] ?? 0) + 1;
       }
@@ -74,7 +76,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return WithMeScaffold(
       lockup: false,
       title: 'Your Insights',
-      onBack: () => Navigator.of(context).pop(),
+      // image32 shows no back chevron, unlike image33 and image34. The route
+      // is pushed, so the system back gesture still returns.
       action: WithMeButton(
         label: 'Share with someone I trust',
         filled: false,
@@ -144,7 +147,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: WithMeSpace.lg),
           const Center(
             child: WithMeAvatar(
-              size: 140,
+              size: 78,
               expression: MascotExpression.encouraging,
             ),
           ),

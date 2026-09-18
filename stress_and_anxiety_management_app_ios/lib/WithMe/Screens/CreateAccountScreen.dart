@@ -110,7 +110,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           ),
           const SizedBox(height: WithMeSpace.lg),
           const Center(
-            child: WithMeAvatar(size: 130, expression: MascotExpression.happy),
+            child: WithMeAvatar(size: 86, expression: MascotExpression.happy),
           ),
         ],
       ),

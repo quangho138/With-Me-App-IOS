@@ -31,12 +31,15 @@ class CheckInScreen extends StatefulWidget {
 }
 
 class _CheckInScreenState extends State<CheckInScreen> {
-  final _page = PageController();
   final _answers = CheckInAnswers();
   final _db = DatabaseHelper();
   final _customStressor = TextEditingController();
 
   int _index = 0;
+
+  /// Which way the last move went, so the transition slides with it.
+  bool _forward = true;
+
   String? _name;
 
   static const int _pageCount = 14;
@@ -51,7 +54,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
 
   @override
   void dispose() {
-    _page.dispose();
     _customStressor.dispose();
     super.dispose();
   }
@@ -61,12 +63,10 @@ class _CheckInScreenState extends State<CheckInScreen> {
       _finish();
       return;
     }
-    setState(() => _index++);
-    _page.animateToPage(
-      _index,
-      duration: WithMeMotion.medium,
-      curve: WithMeMotion.ease,
-    );
+    setState(() {
+      _forward = true;
+      _index++;
+    });
   }
 
   void _back() {
@@ -74,12 +74,10 @@ class _CheckInScreenState extends State<CheckInScreen> {
       Navigator.of(context).pop();
       return;
     }
-    setState(() => _index--);
-    _page.animateToPage(
-      _index,
-      duration: WithMeMotion.medium,
-      curve: WithMeMotion.ease,
-    );
+    setState(() {
+      _forward = false;
+      _index--;
+    });
   }
 
   Future<void> _finish() async {
@@ -141,54 +139,72 @@ class _CheckInScreenState extends State<CheckInScreen> {
             StepProgressBar(count: _pageCount, index: _index),
           ],
           const SizedBox(height: WithMeSpace.lg),
+          // One step at a time rather than a PageView: the page shell measures
+          // its content so a short device scrolls instead of overflowing, and
+          // a viewport cannot be measured.
           Expanded(
-            child: PageView(
-              controller: _page,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _MoodStep(answers: _answers, name: _name, onChanged: _touch),
-                _ScaleStep(
-                  question:
-                      'On a scale of 1 to 5, how would you rate your stress today?',
-                  value: _answers.stress,
-                  lowLabel: 'Calm',
-                  highLabel: 'Overwhelmed',
-                  selectedColor: WithMeColors.coral,
-                  onChanged: (v) => _touch(() => _answers.stress = v),
-                ),
-                _ScaleStep(
-                  question:
-                      'How motivated do you feel to make a positive change today?',
-                  value: _answers.motivation,
-                  lowLabel: 'Not today',
-                  highLabel: 'Ready',
-                  reassurance: "Low is okay. We'll keep it small.",
-                  onChanged: (v) => _touch(() => _answers.motivation = v),
-                ),
-                _AreaStep(answers: _answers, onChanged: _touch),
-                _StressorStep(
-                  answers: _answers,
-                  custom: _customStressor,
-                  onChanged: _touch,
-                ),
-                const _SignsIntroStep(),
-                for (final dimension in SignDimension.values)
-                  _SignsStep(
-                    dimension: dimension,
-                    answers: _answers,
-                    onChanged: _touch,
-                  ),
-                _IntentionStep(answers: _answers, onChanged: _touch),
-                _StrategyStep(answers: _answers, onChanged: _touch),
-                _StrategyDetailStep(answers: _answers, onChanged: _touch),
-                _ReflectionStep(answers: _answers, onChanged: _touch),
-              ],
+            child: AnimatedSwitcher(
+              duration: WithMeMotion.medium,
+              switchInCurve: WithMeMotion.ease,
+              switchOutCurve: WithMeMotion.ease,
+              transitionBuilder: (child, animation) => SlideTransition(
+                position: Tween<Offset>(
+                  begin: Offset(_forward ? 0.12 : -0.12, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: FadeTransition(opacity: animation, child: child),
+              ),
+              child: KeyedSubtree(
+                key: ValueKey(_index),
+                child: _step(_index),
+              ),
             ),
           ),
         ],
       ),
     );
   }
+
+  /// The fourteen steps, in the order the document walks them.
+  Widget _step(int index) => switch (index) {
+        0 => _MoodStep(answers: _answers, name: _name, onChanged: _touch),
+        1 => _ScaleStep(
+            question:
+                'On a scale of 1 to 5, how would you rate your stress today?',
+            value: _answers.stress,
+            lowLabel: 'Calm',
+            highLabel: 'Overwhelmed',
+            selectedColor: WithMeColors.coral,
+            mascotSize: 120,
+            onChanged: (v) => _touch(() => _answers.stress = v),
+          ),
+        2 => _ScaleStep(
+            question:
+                'How motivated do you feel to make a positive change today?',
+            value: _answers.motivation,
+            lowLabel: 'Not today',
+            highLabel: 'Ready',
+            reassurance: "Low is okay. We'll keep it small.",
+            mascotSize: 110,
+            onChanged: (v) => _touch(() => _answers.motivation = v),
+          ),
+        3 => _AreaStep(answers: _answers, onChanged: _touch),
+        4 => _StressorStep(
+            answers: _answers,
+            custom: _customStressor,
+            onChanged: _touch,
+          ),
+        5 => const _SignsIntroStep(),
+        6 || 7 || 8 || 9 => _SignsStep(
+            dimension: SignDimension.values[index - 6],
+            answers: _answers,
+            onChanged: _touch,
+          ),
+        10 => _IntentionStep(answers: _answers, onChanged: _touch),
+        11 => _StrategyStep(answers: _answers, onChanged: _touch),
+        12 => _StrategyDetailStep(answers: _answers, onChanged: _touch),
+        _ => _ReflectionStep(answers: _answers, onChanged: _touch),
+      };
 
   String get _actionLabel => switch (_index) {
         11 => 'Continue',
@@ -244,7 +260,7 @@ class _MoodStep extends StatelessWidget {
         ),
         const Spacer(),
         const Center(
-          child: WithMeAvatar(size: 130, expression: MascotExpression.listening),
+          child: WithMeAvatar(size: 120, expression: MascotExpression.listening),
         ),
         const Spacer(),
         const ReassuranceCard(text: 'No number, no score. Just how it feels.'),
@@ -272,6 +288,7 @@ class _ScaleStep extends StatelessWidget {
     this.highLabel,
     this.reassurance,
     this.selectedColor,
+    required this.mascotSize,
   });
 
   final String question;
@@ -281,6 +298,9 @@ class _ScaleStep extends StatelessWidget {
   final String? highLabel;
   final String? reassurance;
   final Color? selectedColor;
+
+  /// Measured per mockup — 120 on image8, 110 on image9.
+  final double mascotSize;
 
   @override
   Widget build(BuildContext context) {
@@ -301,8 +321,11 @@ class _ScaleStep extends StatelessWidget {
           ReassuranceCard(text: reassurance!),
         ],
         const Spacer(),
-        const Center(
-          child: WithMeAvatar(size: 150, expression: MascotExpression.thinking),
+        Center(
+          child: WithMeAvatar(
+            size: mascotSize,
+            expression: MascotExpression.thinking,
+          ),
         ),
         const Spacer(),
       ],
@@ -361,7 +384,7 @@ class _AreaStep extends StatelessWidget {
         ),
         const Spacer(),
         const Center(
-          child: WithMeAvatar(size: 130, expression: MascotExpression.listening),
+          child: WithMeAvatar(size: 110, expression: MascotExpression.listening),
         ),
         const Spacer(),
       ],
@@ -396,7 +419,7 @@ class _StressorStep extends StatelessWidget {
           WithMeField(controller: custom, hint: 'Add a custom stressor...'),
           const Spacer(),
           const Center(
-            child: WithMeAvatar(size: 130, expression: MascotExpression.listening),
+            child: WithMeAvatar(size: 71, expression: MascotExpression.listening),
           ),
           const Spacer(),
         ],
@@ -458,7 +481,7 @@ class _StressorStep extends StatelessWidget {
         ),
         const Spacer(),
         const Center(
-          child: WithMeAvatar(size: 120, expression: MascotExpression.listening),
+          child: WithMeAvatar(size: 71, expression: MascotExpression.listening),
         ),
         const Spacer(),
       ],
@@ -520,7 +543,7 @@ class _SignsIntroStep extends StatelessWidget {
         ),
         const Spacer(),
         const Center(
-          child: WithMeAvatar(size: 110, expression: MascotExpression.thinking),
+          child: WithMeAvatar(size: 66, expression: MascotExpression.thinking),
         ),
         const Spacer(),
       ],
@@ -892,7 +915,7 @@ class _StrategyDetailStep extends StatelessWidget {
         ),
         const Spacer(),
         const Center(
-          child: WithMeAvatar(size: 130, expression: MascotExpression.encouraging),
+          child: WithMeAvatar(size: 78, expression: MascotExpression.encouraging),
         ),
         const Spacer(),
       ],

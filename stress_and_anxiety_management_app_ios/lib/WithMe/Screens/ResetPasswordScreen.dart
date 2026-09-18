@@ -54,7 +54,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           ),
           const SizedBox(height: WithMeSpace.xl),
           const Center(
-            child: WithMeAvatar(size: 140, expression: MascotExpression.happy),
+            child: WithMeAvatar(size: 95, expression: MascotExpression.happy),
           ),
           const SizedBox(height: WithMeSpace.xl),
           // The mockup shows this panel already filled in; it only makes sense

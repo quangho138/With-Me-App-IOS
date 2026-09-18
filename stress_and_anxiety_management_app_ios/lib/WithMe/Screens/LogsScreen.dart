@@ -38,10 +38,18 @@ class _LogsScreenState extends State<LogsScreen> {
   void initState() {
     super.initState();
     _db.getReflections().then((rows) {
-      if (mounted) setState(() {
-        _rows = rows;
-        _loaded = true;
-      });
+      // Newest first, as the design lists them: Today, Yesterday, Sept 10.
+      final sorted = [...rows]..sort((a, b) {
+          final x = a['date'] as String? ?? '';
+          final y = b['date'] as String? ?? '';
+          return y.compareTo(x);
+        });
+      if (mounted) {
+        setState(() {
+          _rows = sorted;
+          _loaded = true;
+        });
+      }
     });
   }
 
@@ -90,10 +98,20 @@ class _LogCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = DateTime.tryParse(row['date'] as String? ?? '');
+    // The design shows one short line per entry, not the whole reflection.
     final body = [
-      for (final key in ['who', 'what', 'where_question', 'when_question', 'why_question'])
+      for (final key in [
+        'what',
+        'why_question',
+        'who',
+        'where_question',
+        'when_question',
+      ])
         row[key] as String?,
-    ].whereType<String>().where((s) => s.trim().isNotEmpty).join(' · ');
+    ].whereType<String>().firstWhere(
+          (value) => value.trim().isNotEmpty,
+          orElse: () => '',
+        );
 
     return GestureDetector(
       onTap: date == null
@@ -128,6 +146,8 @@ class _LogCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     body.isEmpty ? 'Logged, no note.' : body,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: WithMeText.body.copyWith(color: WithMeColors.ink),
                   ),
                 ],

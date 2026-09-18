@@ -40,17 +40,18 @@ class _TriggersSignsScreenState extends State<TriggersSignsScreen> {
     final signs = <String, int>{};
     final today = DateTime.now();
 
-    for (var back = 0; back < _days; back++) {
-      final date = today.subtract(Duration(days: back));
-      final row = await _db.getStressor(date);
-
-      final category = row?['category'] as String?;
+    final rows = await _db.getStressorsBetween(
+      today.subtract(const Duration(days: _days - 1)),
+      today,
+    );
+    for (final row in rows.values) {
+      final category = row['category'] as String?;
       if (category != null && category.isNotEmpty) {
         triggers[category] = (triggers[category] ?? 0) + 1;
       }
 
       // The check-in stores the chosen signs in the stressor detail column.
-      final detail = row?['detail'] as String?;
+      final detail = row['detail'] as String?;
       if (detail != null && detail.isNotEmpty) {
         for (final sign in detail.split(',')) {
           final key = sign.trim();

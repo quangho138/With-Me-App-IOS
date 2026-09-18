@@ -79,7 +79,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           WithMeField(label: 'Quiet hours', controller: _quietHours),
           const SizedBox(height: WithMeSpace.lg),
           const Center(
-            child: WithMeAvatar(size: 120, expression: MascotExpression.happy),
+            child: WithMeAvatar(size: 61, expression: MascotExpression.happy),
           ),
         ],
       ),

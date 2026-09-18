@@ -52,7 +52,7 @@ class _WithMeHomeScreenState extends State<WithMeHomeScreen> {
           _MenuHeader(onTap: () => _go(const MenuScreen())),
           const SizedBox(height: WithMeSpace.lg),
           const Center(
-            child: WithMeAvatar(size: 150, expression: MascotExpression.happy),
+            child: WithMeAvatar(size: 99, expression: MascotExpression.happy),
           ),
           const SizedBox(height: WithMeSpace.lg),
           WithMeCard(

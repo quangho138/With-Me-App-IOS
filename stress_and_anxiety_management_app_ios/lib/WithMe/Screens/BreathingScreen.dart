@@ -56,6 +56,7 @@ class BreathingScreen extends StatefulWidget {
     this.pattern = BreathPattern.fourSevenEight,
     this.cycles = 4,
     this.sound = 'Waves',
+    this.showPatternTabs,
   });
 
   static const String route = '/breathing';
@@ -63,6 +64,11 @@ class BreathingScreen extends StatefulWidget {
   final BreathPattern pattern;
   final int cycles;
   final String sound;
+
+  /// The pattern switcher. `image29.png` has it; `image27.png` does not —
+  /// 4-7-8 is reached from "Ease your sleep", which offers no alternative.
+  /// Defaults to showing it only for box breathing, as the document does.
+  final bool? showPatternTabs;
 
   @override
   State<BreathingScreen> createState() => _BreathingScreenState();
@@ -175,16 +181,18 @@ class _BreathingScreenState extends State<BreathingScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SegmentedTabs(
-            labels: [for (final p in BreathPattern.values) p.tab],
-            index: BreathPattern.values.indexOf(_pattern),
-            onChanged: _switchPattern,
-          ),
-          const SizedBox(height: WithMeSpace.lg),
+          if (widget.showPatternTabs ?? widget.pattern == BreathPattern.box) ...[
+            SegmentedTabs(
+              labels: [for (final p in BreathPattern.values) p.tab],
+              index: BreathPattern.values.indexOf(_pattern),
+              onChanged: _switchPattern,
+            ),
+            const SizedBox(height: WithMeSpace.lg),
+          ],
           Text(
             _pattern.tab,
             textAlign: TextAlign.center,
-            style: WithMeText.title.copyWith(fontSize: 28),
+            style: WithMeText.title.copyWith(fontSize: 32),
           ),
           const SizedBox(height: WithMeSpace.xs),
           Text(
@@ -199,6 +207,15 @@ class _BreathingScreenState extends State<BreathingScreen>
             style: WithMeText.accent.copyWith(fontSize: 18),
           ),
           const SizedBox(height: WithMeSpace.lg),
+          // image29 runs a rail above the square with a dot travelling along
+          // it; image27 has no rail.
+          if (box)
+            AnimatedBuilder(
+              animation: _phase,
+              builder: (context, _) => _PhaseRail(
+                value: _running ? _phase.value : 0,
+              ),
+            ),
           Expanded(
             child: Center(
               child: AnimatedBuilder(
@@ -226,6 +243,49 @@ class _BreathingScreenState extends State<BreathingScreen>
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// The rail above the box-breathing square (`image29.png`) — a dark line with
+/// a teal dot that travels along it through the phase.
+class _PhaseRail extends StatelessWidget {
+  const _PhaseRail({required this.value});
+
+  /// 0-1 through the current phase.
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 20,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const dot = 18.0;
+          final travel = (constraints.maxWidth - dot) * value.clamp(0, 1);
+          return Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              Container(
+                height: 2.5,
+                margin: const EdgeInsets.symmetric(horizontal: dot / 2),
+                color: WithMeColors.tealInk,
+              ),
+              Padding(
+                padding: EdgeInsets.only(left: travel),
+                child: Container(
+                  width: dot,
+                  height: dot,
+                  decoration: const BoxDecoration(
+                    color: WithMeColors.teal,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -261,19 +321,35 @@ class _BreathShape extends StatelessWidget {
       _ => expanding ? 1.0 : 0.92,
     };
 
+    // Measured off image27 and image29: the shape fills most of the content
+    // column rather than sitting small in the middle.
+    const size = 205.0;
+
     return SizedBox(
-      width: 190,
-      height: 190,
+      width: size + 20,
+      height: square ? 190 : size + 20,
       child: Center(
         child: AnimatedScale(
           scale: scale,
           duration: WithMeMotion.fast,
           child: Container(
-            width: 170,
-            height: 170,
+            width: size,
+            height: square ? 175 : size,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: WithMeColors.mint.withValues(alpha: 0.45),
+              // The circle in image27 fades out at its edge; the square in
+              // image29 is a flat fill with a stroke.
+              color: square ? WithMeColors.mint.withValues(alpha: 0.42) : null,
+              gradient: square
+                  ? null
+                  : RadialGradient(
+                      colors: [
+                        WithMeColors.mint.withValues(alpha: 0.55),
+                        WithMeColors.mint.withValues(alpha: 0.42),
+                        WithMeColors.mint.withValues(alpha: 0.0),
+                      ],
+                      stops: const [0, 0.72, 1],
+                    ),
               shape: square ? BoxShape.rectangle : BoxShape.circle,
               borderRadius: square ? BorderRadius.circular(28) : null,
               border: square
@@ -320,7 +396,8 @@ class _PhaseChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget chip(int i) => _PhaseChip(phase: phases[i], active: i == active);
+    Widget chip(int i) =>
+        _PhaseChip(phase: phases[i], active: i == active, tall: !twoUp);
 
     if (!twoUp) {
       return Column(
@@ -356,15 +433,18 @@ class _PhaseChips extends StatelessWidget {
 }
 
 class _PhaseChip extends StatelessWidget {
-  const _PhaseChip({required this.phase, required this.active});
+  const _PhaseChip({required this.phase, required this.active, this.tall = false});
 
   final (String, int, Color) phase;
   final bool active;
 
+  /// 58 on image27, where three chips stack; 53 on image29's two-up grid.
+  final bool tall;
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 46,
+      height: tall ? 58 : 53,
       padding: const EdgeInsets.symmetric(horizontal: WithMeSpace.md),
       decoration: BoxDecoration(
         color: WithMeColors.cream,

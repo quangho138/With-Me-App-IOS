@@ -37,7 +37,7 @@ class WelcomeScreen extends StatelessWidget {
           const SizedBox(height: WithMeSpace.md),
           const Text('Here. With you.', style: WithMeText.accent),
           const Spacer(),
-          const WithMeAvatar(size: 170, expression: MascotExpression.happy),
+          const WithMeAvatar(size: 139, expression: MascotExpression.happy),
           const Spacer(),
           WithMeButton(
             label: 'Sign Up',

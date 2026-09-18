@@ -39,7 +39,7 @@ class WithMeAboutScreen extends StatelessWidget {
           ),
           const SizedBox(height: WithMeSpace.lg),
           const Center(
-            child: WithMeAvatar(size: 140, expression: MascotExpression.happy),
+            child: WithMeAvatar(size: 82, expression: MascotExpression.happy),
           ),
           const SizedBox(height: WithMeSpace.lg),
           WithMeCard(
@@ -52,9 +52,17 @@ class WithMeAboutScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: WithMeSpace.md),
-          const ReassuranceCard(
-            text: 'With Me does not diagnose or treat, and is not a '
-                'substitute for professional care.',
+          WithMeCard(
+            radius: WithMeSpace.radiusMd,
+            padding: const EdgeInsets.symmetric(
+              horizontal: WithMeSpace.lg,
+              vertical: WithMeSpace.md,
+            ),
+            child: Text(
+              'With Me does not diagnose or treat, and is not a substitute '
+              'for professional care.',
+              style: WithMeText.body.copyWith(color: WithMeColors.inkSoft),
+            ),
           ),
           const SizedBox(height: WithMeSpace.md),
           MenuRow(

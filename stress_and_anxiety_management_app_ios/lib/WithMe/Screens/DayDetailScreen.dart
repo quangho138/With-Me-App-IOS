@@ -35,10 +35,22 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   Future<void> _load() async {
-    final mood = await _db.getMood(widget.date);
-    final gauge = await _db.getControlGauge(widget.date);
-    final stressor = await _db.getStressor(widget.date);
-    final reflections = await _db.getReflectionsByDate(widget.date);
+    String? mood;
+    int? gauge;
+    Map<String, dynamic>? stressor;
+    var reflections = const <Map<String, dynamic>>[];
+
+    // A day with nothing logged is the normal case, not an error — and if a
+    // read does fail, the screen still has to say something rather than
+    // render an empty page.
+    try {
+      mood = await _db.getMood(widget.date);
+      gauge = await _db.getControlGauge(widget.date);
+      stressor = await _db.getStressor(widget.date);
+      reflections = await _db.getReflectionsByDate(widget.date);
+    } catch (_) {
+      // Fall through to the empty state.
+    }
 
     if (!mounted) return;
     setState(() {
@@ -49,6 +61,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       _loaded = true;
     });
   }
+
+  bool get _hasEntry =>
+      _mood != null ||
+      _gauge != null ||
+      _stressor != null ||
+      _reflections.isNotEmpty;
 
   static const List<String> _weekdays = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
@@ -72,7 +90,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       onBack: () => Navigator.of(context).pop(),
       child: !_loaded
           ? const SizedBox.shrink()
-          : Column(
+          : !_hasEntry
+              ? WithMeCard(
+                  child: Text(
+                    'Nothing logged on this day.',
+                    textAlign: TextAlign.center,
+                    style: WithMeText.body,
+                  ),
+                )
+              : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 WithMeCard(

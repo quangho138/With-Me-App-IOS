@@ -80,7 +80,7 @@ class _ReminderScreenState extends State<ReminderScreen> {
           ),
           const SizedBox(height: WithMeSpace.xl),
           const Center(
-            child: WithMeAvatar(size: 140, expression: MascotExpression.happy),
+            child: WithMeAvatar(size: 101, expression: MascotExpression.happy),
           ),
         ],
       ),

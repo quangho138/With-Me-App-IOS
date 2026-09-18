@@ -44,18 +44,25 @@ class _ProgressScreenState extends State<ProgressScreen> {
   Future<void> _load() async {
     final days = _spans[_range];
     final today = DateTime.now();
+    final from = today.subtract(Duration(days: days - 1));
     final stress = <double>[];
     final mood = <double>[];
     var checkIns = 0;
+
+    // Two queries for the span, not two per day — the year view would
+    // otherwise be 730 round trips to open one screen.
+    final gauges = await _db.getControlGaugesBetween(from, today);
+    final moods = await _db.getMoodsBetween(from, today);
 
     // Year view would be 365 points; sample it down to keep the sparkline
     // readable at 342 pt wide.
     final step = days > 60 ? days ~/ 30 : 1;
 
     for (var back = days - 1; back >= 0; back -= step) {
-      final date = today.subtract(Duration(days: back));
-      final gauge = await _db.getControlGauge(date);
-      final m = await _db.getMood(date);
+      final key =
+          DatabaseHelper.dateKey(today.subtract(Duration(days: back)));
+      final gauge = gauges[key];
+      final m = moods[key];
       if (gauge != null) stress.add((6 - gauge).toDouble());
       if (m != null) {
         mood.add(_moodScore(m));
@@ -142,6 +149,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
               Expanded(
                 child: StatTile(
                   value: '$_checkIns',
+                  // Measured at 109 on image37, where the caption wraps.
+                  minHeight: 109,
                   caption: 'check-ins\n$label',
                 ),
               ),
@@ -149,6 +158,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
               Expanded(
                 child: StatTile(
                   tinted: true,
+                  minHeight: 109,
                   value: _checkIns >= 3 ? 'Positive trend' : 'Getting started',
                   caption: 'Keep going!',
                 ),
@@ -190,7 +200,8 @@ class _MiniCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => WithMeCard(
         radius: 18,
-        height: 96,
+        // The pair of chart cards measures 136 tall on image37.
+        height: 136,
         padding: const EdgeInsets.all(WithMeSpace.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

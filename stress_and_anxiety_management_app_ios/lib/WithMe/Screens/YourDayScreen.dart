@@ -87,7 +87,7 @@ class _YourDayScreenState extends State<YourDayScreen> {
           const SizedBox(height: WithMeSpace.lg),
           const Center(
             child: WithMeAvatar(
-              size: 140,
+              size: 95,
               expression: MascotExpression.encouraging,
             ),
           ),

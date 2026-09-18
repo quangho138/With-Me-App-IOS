@@ -39,20 +39,28 @@ class _MonthlyCalendarScreenState extends State<MonthlyCalendarScreen> {
 
   Future<void> _load() async {
     final days = DateTime(_month.year, _month.month + 1, 0).day;
+    final first = DateTime(_month.year, _month.month, 1);
+    final last = DateTime(_month.year, _month.month, days);
     final marks = <int, DayMark>{};
 
+    // Three queries for the month rather than three per day.
+    final moods = await _db.getMoodsBetween(first, last);
+    final gauges = await _db.getControlGaugesBetween(first, last);
+    final stressors = await _db.getStressorsBetween(first, last);
+
     for (var day = 1; day <= days; day++) {
-      final date = DateTime(_month.year, _month.month, day);
-      final mood = await _db.getMood(date);
-      final gauge = await _db.getControlGauge(date);
-      final reflections = await _db.getReflectionsByDate(date);
+      final key = DatabaseHelper.dateKey(
+        DateTime(_month.year, _month.month, day),
+      );
+      final mood = moods[key];
+      final gauge = gauges[key];
 
       // Strongest signal wins, in the order the legend lists them.
       if (mood != null && _isLow(mood)) {
         marks[day] = DayMark.challenging;
       } else if (gauge != null && gauge >= 4) {
         marks[day] = DayMark.feelingBetter;
-      } else if (reflections.isNotEmpty) {
+      } else if (stressors.containsKey(key)) {
         marks[day] = DayMark.exercise;
       } else if (mood != null) {
         marks[day] = DayMark.checkIn;

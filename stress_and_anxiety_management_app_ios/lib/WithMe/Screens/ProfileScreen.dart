@@ -38,12 +38,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final name = await _db.getUserName();
     final reflections = await _db.getReflections();
 
-    var checkIns = 0;
     final today = DateTime.now();
-    for (var back = 0; back < 90; back++) {
-      final mood = await _db.getMood(today.subtract(Duration(days: back)));
-      if (mood != null) checkIns++;
-    }
+    final moods = await _db.getMoodsBetween(
+      today.subtract(const Duration(days: 89)),
+      today,
+    );
+    final checkIns = moods.length;
 
     if (!mounted) return;
     setState(() {

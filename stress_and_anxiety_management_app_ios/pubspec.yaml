@@ -45,6 +45,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Test-only. Gives sqflite a real engine under `flutter test`, so the
+  # golden screens can render their empty state instead of throwing.
+  sqflite_common_ffi: ^2.3.3
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

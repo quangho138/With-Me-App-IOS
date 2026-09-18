@@ -84,7 +84,7 @@ class _WithMeLoginScreenState extends State<WithMeLoginScreen> {
           WithMeField(label: 'Password', controller: _password, obscure: true),
           const SizedBox(height: WithMeSpace.xl),
           const Center(
-            child: WithMeAvatar(size: 140, expression: MascotExpression.happy),
+            child: WithMeAvatar(size: 86, expression: MascotExpression.happy),
           ),
         ],
       ),

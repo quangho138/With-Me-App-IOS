@@ -356,4 +356,63 @@ class DatabaseHelper {
       );
     }
 
+  // --- Range reads ---------------------------------------------------------
+  // The per-date getters above answer one day at a time. The calendar,
+  // dashboard and progress screens each cover a span, and asking day by day
+  // means 30 to 365 round trips to open one screen. These read a span in one
+  // query. Same tables, same YYYY-MM-DD keys - nothing about the schema or
+  // the stored format changes.
+
+  static String _key(DateTime date) => date.toIso8601String().substring(0, 10);
+
+  /// Moods in [from]..[to] inclusive, keyed by YYYY-MM-DD.
+  Future<Map<String, String>> getMoodsBetween(DateTime from, DateTime to) async {
+    final db = await database;
+    final rows = await db.query(
+      'moods',
+      where: 'date >= ? AND date <= ?',
+      whereArgs: [_key(from), _key(to)],
+    );
+    return {
+      for (final row in rows)
+        row['date'] as String: row['mood'] as String,
+    };
+  }
+
+  /// Control-gauge levels in [from]..[to] inclusive, keyed by YYYY-MM-DD.
+  Future<Map<String, int>> getControlGaugesBetween(
+    DateTime from,
+    DateTime to,
+  ) async {
+    final db = await database;
+    final rows = await db.query(
+      'control_gauge',
+      where: 'date >= ? AND date <= ?',
+      whereArgs: [_key(from), _key(to)],
+    );
+    return {
+      for (final row in rows)
+        row['date'] as String: row['level'] as int,
+    };
+  }
+
+  /// Stressor rows in [from]..[to] inclusive, keyed by YYYY-MM-DD.
+  Future<Map<String, Map<String, dynamic>>> getStressorsBetween(
+    DateTime from,
+    DateTime to,
+  ) async {
+    final db = await database;
+    final rows = await db.query(
+      'stressors',
+      where: 'date >= ? AND date <= ?',
+      whereArgs: [_key(from), _key(to)],
+    );
+    return {
+      for (final row in rows)
+        (row['date'] as String).substring(0, 10): row,
+    };
+  }
+
+  /// The key the range reads return, for a given date.
+  static String dateKey(DateTime date) => _key(date);
 }

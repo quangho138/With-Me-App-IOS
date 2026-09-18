@@ -63,7 +63,7 @@ class _RestYourMindScreenState extends State<RestYourMindScreen> {
           ],
           const SizedBox(height: WithMeSpace.xl),
           const Center(
-            child: WithMeAvatar(size: 140, expression: MascotExpression.happy),
+            child: WithMeAvatar(size: 95, expression: MascotExpression.happy),
           ),
         ],
       ),

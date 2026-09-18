@@ -12,18 +12,26 @@ class WithMeCard extends StatelessWidget {
     this.radius = WithMeSpace.radiusLg,
     this.color,
     this.height,
+    this.minHeight,
   });
 
   final Widget child;
   final EdgeInsets padding;
   final double radius;
   final Color? color;
+
+  /// Exact height. Use [minHeight] instead wherever the content can grow.
   final double? height;
+
+  final double? minHeight;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: height,
+      constraints: minHeight == null
+          ? null
+          : BoxConstraints(minHeight: minHeight!),
       padding: padding,
       decoration: BoxDecoration(
         color: color ?? WithMeColors.cream,
@@ -122,7 +130,7 @@ class StatTile extends StatelessWidget {
     required this.value,
     required this.caption,
     this.tinted = false,
-    this.height = 86,
+    this.minHeight = 86,
   });
 
   final String value;
@@ -130,12 +138,16 @@ class StatTile extends StatelessWidget {
 
   /// The "Positive trend / Keep going!" tile on `image37` is mint.
   final bool tinted;
-  final double height;
+
+  /// Measured at 86 on `image4` with a one-line caption, 109 on `image37`
+  /// where the caption wraps. A minimum rather than a fixed height, so a
+  /// longer caption grows the tile instead of overflowing it.
+  final double minHeight;
 
   @override
   Widget build(BuildContext context) {
     return WithMeCard(
-      height: height,
+      minHeight: minHeight,
       radius: 18,
       color: tinted
           ? WithMeColors.mint.withValues(alpha: 0.55)
