@@ -16,6 +16,10 @@ import 'MenuScreen.dart';
 /// The only screen in the design with the bottom nav bar. Week / Month / Year
 /// tabs over a stress sparkline and a mood column, two stat tiles, and today's
 /// intention.
+///
+/// The mockup highlights Home in the nav bar while showing Progress. Treated
+/// as a slip in the mockup — highlighting the screen you are on is what the
+/// control is for. Noted in the spec's known problems.
 class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key});
 
@@ -51,8 +55,18 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
     // Two queries for the span, not two per day — the year view would
     // otherwise be 730 round trips to open one screen.
-    final gauges = await _db.getControlGaugesBetween(from, today);
-    final moods = await _db.getMoodsBetween(from, today);
+    Map<String, int> gauges;
+    Map<String, String> moods;
+    try {
+      gauges = await _db.getControlGaugesBetween(from, today);
+      moods = await _db.getMoodsBetween(from, today);
+    } catch (_) {
+      // A device that cannot open its database should still show the empty
+      // state rather than throw. sqflite has no web implementation, so this
+      // is also what the browser preview takes.
+      gauges = const {};
+      moods = const {};
+    }
 
     // Year view would be 365 points; sample it down to keep the sparkline
     // readable at 342 pt wide.
@@ -106,7 +120,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
     };
 
     return WithMeScaffold(
-      lockup: false,
       title: 'Your Progress',
       bottomNav: WithMeBottomNav(index: 2, onChanged: _navigate),
       child: Column(
@@ -177,12 +190,29 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 MaterialPageRoute(builder: (_) => const DashboardScreen()),
               ),
               behavior: HitTestBehavior.opaque,
-              child: Text(
-                _checkIns == 0
-                    ? 'No intention set today yet.'
-                    : "Today's intention: feel calmer · 1 exercise done",
-                style: WithMeText.body.copyWith(color: WithMeColors.ink),
-              ),
+              child: _checkIns == 0
+                  ? Text(
+                      'No intention set today yet.',
+                      style: WithMeText.body.copyWith(color: WithMeColors.ink),
+                    )
+                  // The mockup sets the intention itself in bold teal.
+                  : RichText(
+                      text: TextSpan(
+                        style: WithMeText.body
+                            .copyWith(color: WithMeColors.ink),
+                        children: [
+                          const TextSpan(text: "Today's intention: "),
+                          TextSpan(
+                            text: 'feel calmer',
+                            style: WithMeText.body.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: WithMeColors.teal,
+                            ),
+                          ),
+                          const TextSpan(text: ' · 1 exercise done'),
+                        ],
+                      ),
+                    ),
             ),
           ),
         ],

@@ -35,15 +35,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _load() async {
-    final name = await _db.getUserName();
-    final reflections = await _db.getReflections();
+    String? name;
+    var reflections = const <Map<String, dynamic>>[];
+    var checkIns = 0;
 
-    final today = DateTime.now();
-    final moods = await _db.getMoodsBetween(
-      today.subtract(const Duration(days: 89)),
-      today,
-    );
-    final checkIns = moods.length;
+    try {
+      name = await _db.getUserName();
+      reflections = await _db.getReflections();
+      final today = DateTime.now();
+      final moods = await _db.getMoodsBetween(
+        today.subtract(const Duration(days: 89)),
+        today,
+      );
+      checkIns = moods.length;
+    } catch (_) {
+      // A device that cannot open its database should still show the empty
+      // state rather than throw. sqflite has no web implementation, so this
+      // is also what the browser preview takes.
+    }
 
     if (!mounted) return;
     setState(() {
@@ -64,12 +73,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _save() async {
-    await _db.saveUserName(_name.text.trim());
+    var saved = true;
+    try {
+      await _db.saveUserName(_name.text.trim());
+    } catch (_) {
+      saved = false;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Saved.')),
+      SnackBar(
+        content: Text(
+          saved ? 'Saved.' : "Couldn't save on this device.",
+        ),
+      ),
     );
-    Navigator.of(context).pop();
+    if (saved) Navigator.of(context).pop();
   }
 
   @override

@@ -568,3 +568,35 @@ into the detector; ignore them.
    the art.
 4. **`image43.png` (membership)** shows card entry for a $4.99/mo plan. No
    payment integration exists; the screen is built as UI only.
+5. **`image37.png` (progress) highlights Home in the bottom nav** while showing
+   Progress. Built to highlight the screen you are on — reproducing the slip
+   would be a bug, not fidelity.
+6. **The primary action is wider than the page margin on `image27` and
+   `image29`** — measured at x 7, w 375, against x 24, w 342 on the other 27
+   screens that have one. Treated as a rendering inconsistency in those two
+   mockups and built to the consistent grid.
+7. **`image38.png` (reminder) measures ~7 pt taller on every element** than the
+   same components elsewhere — 59 pt rows against 52, a 69 pt toggle against
+   63. Uniform across the whole screen and nowhere else, so read as scale
+   noise in that mockup rather than a second size for the same component.
+8. **`image31.png` (soundscape) defeats the frame detector.** Its dark red
+   background is close enough to the device frame that `find_screen` crops the
+   top off, so its row in the comparison report is unreliable. Checked by eye
+   instead.
+
+## Checking the build against the document
+
+```bash
+flutter test --tags golden --run-skipped --update-goldens
+python tool/compare_screens.py --sheets
+```
+
+The first renders all 45 screens at 390 x 844 with the real fonts, real device
+insets and a week of seeded check-ins. The second pairs each capture with its
+mockup, runs the same detection over both, and prints the differences; with
+`--sheets` it also writes side-by-side images to `build/compare/` for the
+things geometry cannot catch — wording, weight, the mascot.
+
+Vertical positions are compared against whichever edge an element is anchored
+to, since the device is ~50 pt taller than the mockup and one of the two
+distances always carries that slack.

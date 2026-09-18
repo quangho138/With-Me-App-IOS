@@ -44,9 +44,21 @@ class _MonthlyCalendarScreenState extends State<MonthlyCalendarScreen> {
     final marks = <int, DayMark>{};
 
     // Three queries for the month rather than three per day.
-    final moods = await _db.getMoodsBetween(first, last);
-    final gauges = await _db.getControlGaugesBetween(first, last);
-    final stressors = await _db.getStressorsBetween(first, last);
+    Map<String, String> moods;
+    Map<String, int> gauges;
+    Map<String, Map<String, dynamic>> stressors;
+    try {
+      moods = await _db.getMoodsBetween(first, last);
+      gauges = await _db.getControlGaugesBetween(first, last);
+      stressors = await _db.getStressorsBetween(first, last);
+    } catch (_) {
+      // A device that cannot open its database should still show the empty
+      // state rather than throw. sqflite has no web implementation, so this
+      // is also what the browser preview takes.
+      moods = const {};
+      gauges = const {};
+      stressors = const {};
+    }
 
     for (var day = 1; day <= days; day++) {
       final key = DatabaseHelper.dateKey(
@@ -79,7 +91,8 @@ class _MonthlyCalendarScreenState extends State<MonthlyCalendarScreen> {
   Widget build(BuildContext context) {
     return WithMeScaffold(
       title: 'Monthly Calendar',
-      onBack: () => Navigator.of(context).pop(),
+      // image6 shows no back chevron. Pushed route, so the platform's own
+      // back gesture still returns.
       footnote: const AccentLine('Every step counts'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

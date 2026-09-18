@@ -1,0 +1,9 @@
+# The golden captures render real dates, so they cannot match across days.
+# They are a tool for comparing the build against the design mockups, not a
+# regression gate, and are skipped unless asked for by name:
+#
+#   flutter test --tags golden --run-skipped --update-goldens
+#   python ../tool/compare_screens.py --sheets
+tags:
+  golden:
+    skip: "capture tool - run with --tags golden --run-skipped --update-goldens"

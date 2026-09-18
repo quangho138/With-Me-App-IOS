@@ -40,7 +40,22 @@ class _WithMeLoginScreenState extends State<WithMeLoginScreen> {
 
   Future<void> _login() async {
     setState(() => _busy = true);
-    final user = await _db.getUser(_email.text.trim(), _password.text);
+
+    Map<String, dynamic>? user;
+    try {
+      user = await _db.getUser(_email.text.trim(), _password.text);
+    } catch (_) {
+      // See the note in CreateAccountScreen: the button has to come back.
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Couldn't read your account on this device."),
+        ),
+      );
+      return;
+    }
+
     if (!mounted) return;
     setState(() => _busy = false);
 

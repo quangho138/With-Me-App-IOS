@@ -36,10 +36,15 @@ the legacy HOWRU.LIFE screens and became the app. `main.dart` opens on the
 welcome screen, the theme lives on `MaterialApp`, and the blue-grey
 presentation layer is gone.
 
-All 45 screens are built. `lib/Database/LocalDatabase.dart` is **unchanged** —
-the check-in still writes through `insertMood`, `insertControlGauge`,
-`insertStressor` and `insertReflection`, and the `YYYY-MM-DD` date format those
-queries depend on is untouched.
+All 45 screens are built. The check-in still writes through the existing
+`insertMood`, `insertControlGauge`, `insertStressor` and `insertReflection`,
+and the `YYYY-MM-DD` date format those queries depend on is untouched.
+
+`lib/Database/LocalDatabase.dart` gained three **additive** range reads —
+`getMoodsBetween`, `getControlGaugesBetween`, `getStressorsBetween` — because
+the calendar, dashboard and progress screens each cover a span and asking day
+by day meant 30 to 365 round trips to open one screen. Same tables, same keys,
+no schema change, nothing existing altered.
 
 Dashboards read real rows. On a fresh install the insights screen says "No
 check-ins in the last 30 days yet" rather than inventing the mockup's
@@ -47,10 +52,36 @@ check-ins in the last 30 days yet" rather than inventing the mockup's
 
 ```
 flutter analyze   0 errors, 0 warnings
-flutter test      3 passing
+flutter test      3 passing, 1 suite skipped (the golden capture — see below)
+flutter build web working; runs in Chrome with no console errors
 ```
 
-Verified in Chrome at 390 × 844 against the mockups.
+## How the build is checked against the document
+
+Not by eye. Two commands:
+
+```bash
+flutter test --tags golden --run-skipped --update-goldens
+python tool/compare_screens.py --sheets
+```
+
+The first renders all 45 screens at 390 × 844 with the real fonts, real
+device insets and a week of seeded check-ins. The second pairs each capture
+with its mockup, runs the same rectangle detection over both, and prints the
+differences — comparing each element against whichever edge it is anchored to,
+since the device is ~50 pt taller than the mockup. `--sheets` also writes
+side-by-side images to `build/compare/`.
+
+The golden suite is tagged and skipped by a plain `flutter test`: the screens
+print real dates ("Today", "Yesterday", "Sept 12"), so a capture taken today
+does not match one taken tomorrow. It is a comparison tool, not a regression
+gate, and `dart_test.yaml` says so.
+
+Running that found, and this branch fixed: an oversized mascot on every screen,
+30–365 sequential database queries to open one screen, the pattern switcher on
+the wrong breathing screen, both breath shapes at two thirds their size, a
+blank page for a day with no entry, and logs listed oldest-first with all five
+reflection prompts crammed into each card.
 
 ## Decisions you should know about
 
@@ -102,6 +133,8 @@ These are drawn because the design draws them, and they do nothing:
 
 ## Still open
 
+0. **Android is unverified** and iOS has never been built — see Platforms
+   above. Neither is possible from this machine in its current state.
 1. **Strategy ratings have no table.** `LocalDatabase` covers reflections,
    moods, the control gauge and stressors. The strategies screen (`image21`)
    and the Strategies & Actions breakdown (`image34`) have nowhere to write,
@@ -114,6 +147,34 @@ These are drawn because the design draws them, and they do nothing:
 4. **Signs are stored in the stressor `detail` column**, comma-joined, because
    there is no signs table. The Triggers & Signs screen parses them back out.
    It works; it is not a schema.
+
+## Platforms
+
+| | |
+|---|---|
+| **Web (Chrome)** | Builds and runs. Every screen renders and navigates. **Cannot persist** — sqflite has no web implementation, so anything that writes fails. |
+| **iOS** | The real target. Cannot be built from Windows; needs macOS and Xcode. |
+| **Android** | Not verified — see below. |
+| **Windows desktop** | Needs the Visual Studio "Desktop development with C++" workload, which is not installed. |
+
+Because the browser cannot persist, every database call is now wrapped: a
+failure shows a message and leaves the screen on its empty state. Before that,
+"Create account" sat disabled for ever on web with an uncaught exception behind
+it. That guard matters on a real device too — a database that will not open
+should not trap the user.
+
+### Android is unverified, and needs a machine with disk space
+
+The project pinned Gradle 8.12, AGP 8.9.1 and Kotlin 2.1.0. Flutter 3.47.4
+requires at least 8.14.0, 8.11.1 and 2.2.20, so the Android build failed
+immediately on version checks — it could not have worked as delivered. Those
+three pins are bumped on this branch.
+
+The build then failed again on `Problems writing to Binary store` and a failed
+NDK download. **The machine's C: drive has 799 MB free of 475 GB.** Gradle
+cannot write its cache or fetch the NDK in that space. The version bumps are
+therefore correct by the toolchain's own stated minimums but **not verified end
+to end** — re-run `flutter build apk --debug` once there is room.
 
 ## Running it
 

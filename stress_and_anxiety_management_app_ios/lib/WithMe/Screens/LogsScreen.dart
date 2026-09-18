@@ -37,7 +37,9 @@ class _LogsScreenState extends State<LogsScreen> {
   @override
   void initState() {
     super.initState();
-    _db.getReflections().then((rows) {
+    _db.getReflections().catchError((_) {
+      return const <Map<String, dynamic>>[];
+    }).then((rows) {
       // Newest first, as the design lists them: Today, Yesterday, Sept 10.
       final sorted = [...rows]..sort((a, b) {
           final x = a['date'] as String? ?? '';

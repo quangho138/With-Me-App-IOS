@@ -54,14 +54,26 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     }
 
     setState(() => _busy = true);
-    final taken = await _db.emailExists(email);
-    if (taken) {
+
+    try {
+      if (await _db.emailExists(email)) {
+        if (!mounted) return;
+        setState(() => _busy = false);
+        _say('That email already has an account.');
+        return;
+      }
+      await _db.insertUser(email, password);
+      await _db.saveUserName(name);
+    } catch (_) {
+      // sqflite has no web implementation, and a device can fail to open its
+      // database too. Either way the button has to come back and say so
+      // rather than sit disabled for ever.
+      if (!mounted) return;
       setState(() => _busy = false);
-      _say('That email already has an account.');
+      _say("Couldn't save your account on this device.");
       return;
     }
-    await _db.insertUser(email, password);
-    await _db.saveUserName(name);
+
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const WithMeHomeScreen()),

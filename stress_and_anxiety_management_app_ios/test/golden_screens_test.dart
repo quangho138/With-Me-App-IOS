@@ -1,3 +1,6 @@
+@Tags(['golden'])
+library;
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -40,10 +43,14 @@ import 'package:stress_and_anxiety_management_app_ios/WithMe/Theme/WithMeTheme.d
 /// `test/goldens/`, so the build can be compared against the mockups rather
 /// than eyeballed.
 ///
-///     flutter test --update-goldens test/golden_screens_test.dart
-///     python ../tool/compare_screens.py
+///     flutter test --tags golden --run-skipped --update-goldens
+///     python ../tool/compare_screens.py --sheets
 ///
-/// Run as a normal test afterwards, it fails on any visual change.
+/// Tagged, and skipped by `flutter test` (see `dart_test.yaml`), because the
+/// captures are not reproducible across days: the screens print real dates —
+/// "Today", "Yesterday", "Sept 12" — so a golden taken today does not match
+/// one taken tomorrow. This is a capture tool for comparing against the
+/// mockups, not a regression gate.
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -220,7 +227,10 @@ Future<void> _seedDatabase() async {
     'Domestic duties',
   ];
 
-  final today = DateTime.now();
+  // 9:41 is the time every mockup's status bar shows. Fixing it keeps two
+  // captures taken on the same day identical.
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day, 9, 41);
   for (var back = 0; back < moods.length; back++) {
     final date = today.subtract(Duration(days: back));
     await db.insertMood(date, moods[back]);

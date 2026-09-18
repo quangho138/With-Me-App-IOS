@@ -40,10 +40,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final counts = <String, int>{};
     final today = DateTime.now();
 
-    final rows = await _db.getStressorsBetween(
-      today.subtract(const Duration(days: 29)),
-      today,
-    );
+    Map<String, Map<String, dynamic>> rows;
+    try {
+      rows = await _db.getStressorsBetween(
+        today.subtract(const Duration(days: 29)),
+        today,
+      );
+    } catch (_) {
+      // A device that cannot open its database should still show the empty
+      // state rather than throw. sqflite has no web implementation, so this
+      // is also what the browser preview takes.
+      rows = const {};
+    }
     for (final row in rows.values) {
       final category = row['category'] as String?;
       if (category != null && category.isNotEmpty) {
@@ -114,7 +122,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   )
                 : Row(
                     children: [
-                      DonutChart(slices: _slices, centreLabel: '30d'),
+                      // 128 puts the card at the measured 170 tall.
+                      DonutChart(
+                        slices: _slices,
+                        centreLabel: '30d',
+                        size: 128,
+                        thickness: 26,
+                      ),
                       const SizedBox(width: WithMeSpace.lg),
                       Expanded(child: ValueLegend(slices: _slices)),
                     ],

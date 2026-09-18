@@ -32,9 +32,14 @@ class _WithMeHomeScreenState extends State<WithMeHomeScreen> {
   @override
   void initState() {
     super.initState();
-    DatabaseHelper().getUserName().then((name) {
-      if (mounted) setState(() => _name = name);
-    });
+    DatabaseHelper()
+        .getUserName()
+        .then((name) {
+          if (mounted) setState(() => _name = name);
+        })
+        // Greeting the user by name is a nicety; without a database the
+        // screen just says "Welcome back!".
+        .catchError((_) {});
   }
 
   void _go(Widget screen) => Navigator.of(context)

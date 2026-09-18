@@ -40,10 +40,18 @@ class _TriggersSignsScreenState extends State<TriggersSignsScreen> {
     final signs = <String, int>{};
     final today = DateTime.now();
 
-    final rows = await _db.getStressorsBetween(
-      today.subtract(const Duration(days: _days - 1)),
-      today,
-    );
+    Map<String, Map<String, dynamic>> rows;
+    try {
+      rows = await _db.getStressorsBetween(
+        today.subtract(const Duration(days: _days - 1)),
+        today,
+      );
+    } catch (_) {
+      // A device that cannot open its database should still show the empty
+      // state rather than throw. sqflite has no web implementation, so this
+      // is also what the browser preview takes.
+      rows = const {};
+    }
     for (final row in rows.values) {
       final category = row['category'] as String?;
       if (category != null && category.isNotEmpty) {

@@ -41,11 +41,16 @@ class _YourDayScreenState extends State<YourDayScreen> {
 
   int get _done => _tasks.where((t) => t.state == _TaskState.done).length;
 
+  static String _word(int n) => const [
+        'Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six',
+      ].elementAtOrNull(n) ??
+      '$n';
+
   @override
   Widget build(BuildContext context) {
     return WithMeScaffold(
       title: 'Your day',
-      onBack: () => Navigator.of(context).pop(),
+      // image36 shows no back chevron — the check-in lands here.
       action: WithMeButton(
         label: 'Do it now',
         onPressed: () => Navigator.of(context).push(
@@ -80,7 +85,8 @@ class _YourDayScreenState extends State<YourDayScreen> {
           const SizedBox(height: WithMeSpace.md),
           ReassuranceCard(
             tinted: true,
-            text: '$_done of ${_tasks.length} done. '
+            // The design spells the counts out rather than using digits.
+            text: '${_word(_done)} of ${_word(_tasks.length)} done. '
                 'The step you chose this morning is still waiting — two '
                 'minutes is enough.',
           ),
@@ -124,9 +130,7 @@ class _TaskRow extends StatelessWidget {
               _TaskState.later => 'LATER',
             },
             style: WithMeText.sectionLabel.copyWith(
-              color: task.state == _TaskState.now
-                  ? WithMeColors.coral
-                  : WithMeColors.inkFaint,
+              color: WithMeColors.inkFaint,
             ),
           ),
         ],

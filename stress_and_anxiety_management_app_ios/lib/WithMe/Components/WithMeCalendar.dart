@@ -174,7 +174,8 @@ class MonthCalendar extends StatelessWidget {
           : null,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        height: 34,
+        // 31 puts the month panel at the measured 280 tall.
+        height: 31,
         child: Center(
           child: Container(
             width: 28,
@@ -233,7 +234,7 @@ class CalendarLegend extends StatelessWidget {
         children: [
           for (final mark in DayMark.values)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.symmetric(vertical: 3),
               child: Row(
                 children: [
                   Container(

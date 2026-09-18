@@ -6,7 +6,7 @@ with the mockup its name carries, normalises both to the 390 pt reference
 width, runs the same rectangle detection over each, and reports the
 differences.
 
-    flutter test --update-goldens test/golden_screens_test.dart
+    flutter test --tags golden --run-skipped --update-goldens
     python tool/compare_screens.py                  # report
     python tool/compare_screens.py --sheets         # also write side-by-sides
 
@@ -202,7 +202,7 @@ def main(argv):
     pairs = golden_pairs()
     if not pairs:
         print("No goldens. Run:")
-        print("  flutter test --update-goldens test/golden_screens_test.dart")
+        print("  flutter test --tags golden --run-skipped --update-goldens")
         return 1
 
     total = 0

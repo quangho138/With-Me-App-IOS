@@ -47,9 +47,12 @@ class _CheckInScreenState extends State<CheckInScreen> {
   @override
   void initState() {
     super.initState();
-    _db.getUserName().then((n) {
-      if (mounted) setState(() => _name = n);
-    });
+    _db
+        .getUserName()
+        .then((n) {
+          if (mounted) setState(() => _name = n);
+        })
+        .catchError((_) {});
   }
 
   @override
@@ -81,6 +84,28 @@ class _CheckInScreenState extends State<CheckInScreen> {
   }
 
   Future<void> _finish() async {
+    try {
+      await _save();
+    } catch (_) {
+      // The check-in is done either way — losing the write must not trap the
+      // user on the last step. sqflite has no web implementation, so the
+      // browser preview always lands here.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Couldn't save this check-in on this device."),
+          ),
+        );
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const YourDayScreen()),
+    );
+  }
+
+  Future<void> _save() async {
     final today = DateTime.now();
 
     if (_answers.mood != null) {
@@ -110,11 +135,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
         date: today,
       );
     }
-
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const YourDayScreen()),
-    );
   }
 
   static String _moodLabel(int index) =>
