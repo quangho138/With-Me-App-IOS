@@ -93,7 +93,22 @@ class WithMeScaffold extends StatelessWidget {
         body: SafeArea(
           child: Padding(
             padding: WithMeSpace.page,
-            child: content,
+            child: scrollable
+                ? content
+                // Fixed-height screens lay out against Spacers, which cannot
+                // shrink. Give them the viewport as a minimum and let anything
+                // shorter than the 844 pt reference scroll rather than
+                // overflow.
+                : LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: IntrinsicHeight(child: content),
+                      ),
+                    ),
+                  ),
           ),
         ),
       ),

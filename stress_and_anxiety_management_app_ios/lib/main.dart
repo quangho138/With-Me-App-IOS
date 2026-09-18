@@ -1,97 +1,96 @@
 import 'package:flutter/material.dart';
 
-import 'Screens/HomeScreen.dart';
-import 'Screens/AboutScreen.dart';
-import 'Screens/DashboardScreen.dart';
-import 'Screens/BreathingExercisesSelectionScreen.dart';
-import 'Screens/LoginScreen.dart';
-import 'Screens/SignUpScreen.dart';
-import 'Screens/FaqScreen.dart';
-import 'Screens/SettingScreen.dart';
+import 'WithMe/Screens/AboutScreen.dart';
+import 'WithMe/Screens/BeforeWeStartScreen.dart';
+import 'WithMe/Screens/BreathingScreen.dart';
 import 'WithMe/Screens/CheckInScreen.dart';
-import 'WithMe/Screens/CompanionChatScreen.dart';
-import 'WithMe/Screens/MascotGalleryScreen.dart';
-import 'WithMe/Screens/WithMeGreetingScreen.dart';
-import 'WithMe/Screens/WithMeWelcomeScreen.dart';
+import 'WithMe/Screens/CreateAccountScreen.dart';
+import 'WithMe/Screens/DashboardScreen.dart';
+import 'WithMe/Screens/ExerciseChooseScreen.dart';
+import 'WithMe/Screens/HelpScreen.dart';
+import 'WithMe/Screens/HomeScreen.dart';
+import 'WithMe/Screens/LoginScreen.dart';
+import 'WithMe/Screens/LogsScreen.dart';
+import 'WithMe/Screens/MembershipScreen.dart';
+import 'WithMe/Screens/MenuScreen.dart';
+import 'WithMe/Screens/MonthlyCalendarScreen.dart';
+import 'WithMe/Screens/NotificationsScreen.dart';
+import 'WithMe/Screens/ProfileScreen.dart';
+import 'WithMe/Screens/ProgressScreen.dart';
+import 'WithMe/Screens/RememberScreen.dart';
+import 'WithMe/Screens/ReminderScreen.dart';
+import 'WithMe/Screens/ResetPasswordScreen.dart';
+import 'WithMe/Screens/RestYourMindScreen.dart';
+import 'WithMe/Screens/SettingsScreen.dart';
+import 'WithMe/Screens/SoundscapeScreen.dart';
+import 'WithMe/Screens/StrategiesActionsScreen.dart';
+import 'WithMe/Screens/TriggersSignsScreen.dart';
+import 'WithMe/Screens/WelcomeScreen.dart';
+import 'WithMe/Screens/YourDayScreen.dart';
+import 'WithMe/Theme/WithMeTheme.dart';
 
-/// Entry point of the Flutter application
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // The database is no longer wiped on launch — the companion needs its
-  // conversation history and the user's logs to survive a restart.
-  runApp(const MyApp()); // Runs the root widget of the app
+  // The database is not wiped on launch — the logs have to survive a restart.
+  runApp(const WithMeApp());
 }
 
-/// Root widget of the app, extending StatelessWidget because the app state
-/// does not need to be mutable at this level
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+/// With Me.
+///
+/// The app is now the design in `WITH ME Complete App Design V1.docx` end to
+/// end, so the theme lives here rather than being re-applied per screen, and
+/// the entry route is the welcome screen (`image1.png`) rather than the old
+/// HOWRU.LIFE login.
+class WithMeApp extends StatelessWidget {
+  const WithMeApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // MaterialApp is the main wrapper that provides material design styling,
-    // themes, navigation, and routes to the app.
     return MaterialApp(
-      debugShowCheckedModeBanner:
-          false, // Hides the debug banner in the top-right
-      title: 'HOWRU.LIFE', // App title shown in task manager or window
-      theme: ThemeData(
-        primarySwatch:
-            Colors.blueGrey, // Sets default colors for app bars, buttons, etc.
-      ),
-
-      // Routes define named navigation paths for different screens
+      debugShowCheckedModeBanner: false,
+      title: 'With Me',
+      theme: buildWithMeTheme(),
+      initialRoute: WelcomeScreen.route,
       routes: {
-        '/': (context) => const LoginScreen(),
-        '/home': (context) => const HomeScreen(), // Main home screen
-        '/about': (context) => const AboutScreen(), // About screen
-        '/dashboard': (context) =>
-            const DashboardScreen(), // Dashboard with stats and recent reflections
-        '/breathing-exercise': (context) =>
-            const BreathingExercisesSelectionScreen(), // Breathing exercises for stress relief
-        '/signup': (context) => const SignupScreen(),
-        '/login': (context) => const LoginScreen(),
-        '/logout': (context) => const LoginScreen(),
-        '/faq': (context) => const FaqScreen(), // FAQ Screen
-        '/settings': (context) => const SettingScreen(),
-        // Placeholder screens for features not implemented yet
-        '/membership': (context) =>
-            const PlaceholderScreen(title: 'Membership'),
+        // Onboarding — image1 to image4
+        WelcomeScreen.route: (_) => const WelcomeScreen(),
+        CreateAccountScreen.route: (_) => const CreateAccountScreen(),
+        WithMeLoginScreen.route: (_) => const WithMeLoginScreen(),
+        ResetPasswordScreen.route: (_) => const ResetPasswordScreen(),
+        ProfileScreen.route: (_) => const ProfileScreen(),
 
-        // --- With Me AI companion -------------------------------------------
-        '/with-me': (context) => const WithMeWelcomeScreen(),
-        '/with-me/greeting': (context) => const WithMeGreetingScreen(),
-        '/with-me/chat': (context) => const CompanionChatScreen(),
-        '/with-me/check-in': (context) => const CheckInScreen(),
-        '/with-me/avatar': (context) => const MascotGalleryScreen(),
+        // Home and calendar — image5, image6
+        WithMeHomeScreen.route: (_) => const WithMeHomeScreen(),
+        MonthlyCalendarScreen.route: (_) => const MonthlyCalendarScreen(),
+
+        // The check-in — image7 to image24
+        CheckInScreen.route: (_) => const CheckInScreen(),
+
+        // Exercises — image25 to image31
+        ExerciseChooseScreen.route: (_) => const ExerciseChooseScreen(),
+        RestYourMindScreen.route: (_) => const RestYourMindScreen(),
+        BeforeWeStartScreen.route: (_) => const BeforeWeStartScreen(),
+        BreathingScreen.route: (_) => const BreathingScreen(),
+        SoundscapeScreen.route: (_) => const SoundscapeScreen(),
+
+        // Dashboard — image32 to image39
+        DashboardScreen.route: (_) => const DashboardScreen(),
+        TriggersSignsScreen.route: (_) => const TriggersSignsScreen(),
+        StrategiesActionsScreen.route: (_) => const StrategiesActionsScreen(),
+        YourDayScreen.route: (_) => const YourDayScreen(),
+        ProgressScreen.route: (_) => const ProgressScreen(),
+        ReminderScreen.route: (_) => const ReminderScreen(),
+        RememberScreen.route: (_) => const RememberScreen(),
+
+        // Menu and settings — image40 to image45
+        MenuScreen.route: (_) => const MenuScreen(),
+        SettingsScreen.route: (_) => const SettingsScreen(),
+        NotificationsScreen.route: (_) => const NotificationsScreen(),
+        MembershipScreen.route: (_) => const MembershipScreen(),
+        WithMeAboutScreen.route: (_) => const WithMeAboutScreen(),
+        HelpScreen.route: (_) => const HelpScreen(),
+        LogsScreen.route: (_) => const LogsScreen(),
       },
-    );
-  }
-}
-
-/// A simple placeholder screen for pages not yet implemented.
-/// Accepts a title to display in the AppBar and body.
-class PlaceholderScreen extends StatelessWidget {
-  final String title; // The title to display in AppBar and body
-
-  const PlaceholderScreen({super.key, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      // Scaffold provides the basic material design layout structure:
-      // AppBar at the top, Body in the main content area
-      appBar: AppBar(
-        title: Text(title), // Displays the passed-in title
-      ),
-      body: Center(
-        child: Text(
-          title == 'Membership' 
-            ? 'Membership Prices Coming soon' 
-            : 'This is the $title page', // Simple placeholder text in the center
-          style: const TextStyle(fontSize: 18),
-        ),
-      ),
     );
   }
 }

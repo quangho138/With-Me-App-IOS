@@ -1,30 +1,69 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:stress_and_anxiety_management_app_ios/main.dart';
+import 'package:stress_and_anxiety_management_app_ios/WithMe/Components/WithMeControls.dart';
+import 'package:stress_and_anxiety_management_app_ios/WithMe/Screens/WelcomeScreen.dart';
+import 'package:stress_and_anxiety_management_app_ios/WithMe/Theme/WithMeTheme.dart';
 
+/// The previous file here was the untouched `flutter create` counter test,
+/// which asserted on a counter this app has never had.
+///
+/// These cover the two things a design-exact rebuild can actually regress
+/// without anyone noticing: the entry screen's content, and the measured
+/// geometry the whole layout rests on.
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  /// Everything is measured against iPhone 14/15, so the tests render at that
+  /// size rather than the 800 x 600 default.
+  void useReferenceDevice(WidgetTester tester) {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+  }
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('the welcome screen shows the three entry actions', (
+    tester,
+  ) async {
+    useReferenceDevice(tester);
+    await tester.pumpWidget(
+      MaterialApp(theme: buildWithMeTheme(), home: const WelcomeScreen()),
+    );
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('With Me'), findsOneWidget);
+    expect(find.text('Your AI Companion'), findsOneWidget);
+    expect(find.text('Here. With you.'), findsOneWidget);
+    expect(find.text('Sign Up'), findsOneWidget);
+    expect(find.text('Log In'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
+  });
+
+  testWidgets('the primary action keeps its measured 60 pt height', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildWithMeTheme(),
+        home: Scaffold(
+          body: WithMeButton(label: 'Continue', onPressed: () {}),
+        ),
+      ),
+    );
+
+    final box = tester.getSize(
+      find.ancestor(
+        of: find.text('Continue'),
+        matching: find.byType(Container),
+      ).first,
+    );
+    expect(box.height, WithMeSpace.ctaHeight);
+  });
+
+  test('the page grid matches the measured mockups', () {
+    // 290 x 590 px inner screen, scaled by 390 / 290. See
+    // docs/WITH_ME_SPEC_V1.md and tool/measure_mockups.py.
+    expect(WithMeSpace.pageMargin, 24);
+    expect(WithMeSpace.contentWidth, 390 - 2 * WithMeSpace.pageMargin);
+    expect(WithMeSpace.radiusMd, 16);
+    expect(WithMeSpace.ctaHeight, 60);
   });
 }
