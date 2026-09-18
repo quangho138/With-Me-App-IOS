@@ -178,8 +178,7 @@ those.
 **Watch the disk.** The C: drive on this machine runs at 99–100% full (3.6 GB
 free of 475 GB at the time of writing). The first build attempt ran out of
 space mid-way and left a truncated NDK at
-`%LOCALAPPDATA%\Android\sdk
-dk8.2.13676358` — an empty directory with
+`%LOCALAPPDATA%/Android/sdk/ndk/28.2.13676358` — an empty directory with
 only `.installer` in it. Every later attempt then failed with `[CXX1101] NDK …
 did not have a source.properties file`, which reads like an SDK problem rather
 than a disk one. Deleting that directory and rebuilding let the NDK download
