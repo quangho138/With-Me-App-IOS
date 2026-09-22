@@ -231,11 +231,16 @@ class WithMeText {
     height: 1.45,
   );
 
+  /// inkSoft, not inkFaint. Zoom image7's "Rough / Okay / Good" and the
+  /// glyphs are a dark slate, not the pale grey inkFaint renders - and
+  /// inkFaint on cream is 2.6:1, which puts 13 pt text under the 4.5:1 floor
+  /// while `body` at 15 pt already sits on inkSoft. The smaller size was
+  /// carrying the weaker colour.
   static const TextStyle caption = TextStyle(
     fontFamily: ui,
     fontSize: 13,
     fontWeight: FontWeight.w500,
-    color: WithMeColors.inkFaint,
+    color: WithMeColors.inkSoft,
     letterSpacing: 0.2,
   );
 

@@ -170,7 +170,13 @@ class StatTile extends StatelessWidget {
           Text(
             caption,
             textAlign: TextAlign.center,
-            style: WithMeText.caption,
+            // inkFaint is a grey meant for cream. On the mint tile it lands
+            // at about 2:1 against the fill, which is neither legible nor
+            // what the design draws - image37 reads "Keep going!" as dark as
+            // the value above it.
+            style: tinted
+                ? WithMeText.caption.copyWith(color: WithMeColors.teal)
+                : WithMeText.caption,
           ),
         ],
       ),

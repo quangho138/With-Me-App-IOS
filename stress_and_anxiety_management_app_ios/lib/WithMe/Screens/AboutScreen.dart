@@ -61,7 +61,10 @@ class WithMeAboutScreen extends StatelessWidget {
             child: Text(
               'With Me does not diagnose or treat, and is not a substitute '
               'for professional care.',
-              style: WithMeText.body.copyWith(color: WithMeColors.inkSoft),
+              // ink, matching the paragraph above it. image44 draws both
+              // blocks the same darkness, and inkSoft made the one medical
+              // disclaimer in the app the faintest text on the screen.
+              style: WithMeText.body.copyWith(color: WithMeColors.ink),
             ),
           ),
           const SizedBox(height: WithMeSpace.md),

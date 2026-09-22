@@ -259,6 +259,10 @@ class _MoodStep extends StatelessWidget {
         QuestionCard(question: 'Hello $who,\nhow are you feeling today?'),
         const SizedBox(height: WithMeSpace.md),
         WithMeCard(
+          // 24, not the card default of 16. Measured off image7: the pink
+          // swatch starts at x = 48 against a card edge of 24, and at 16 the
+          // five circles spread wider apart than the design draws them.
+          padding: const EdgeInsets.all(WithMeSpace.xl),
           child: Column(
             children: [
               MoodSelector(

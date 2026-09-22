@@ -160,6 +160,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                             const SizedBox(height: WithMeSpace.sm),
                             BarChart(
                               values: _signBars(),
+                              colors: WithMeColors.series,
                               highlightLast: false,
                               height: 44,
                             ),

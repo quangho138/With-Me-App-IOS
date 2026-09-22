@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:stress_and_anxiety_management_app_ios/Database/LocalDatabase.dart';
+import 'package:stress_and_anxiety_management_app_ios/WithMe/Components/WithMeControls.dart';
 import 'package:stress_and_anxiety_management_app_ios/WithMe/Screens/AboutScreen.dart';
 import 'package:stress_and_anxiety_management_app_ios/WithMe/Screens/BeforeWeStartScreen.dart';
 import 'package:stress_and_anxiety_management_app_ios/WithMe/Screens/BreathingScreen.dart';
@@ -95,6 +96,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
 
+      final drive = _drivers[entry.key];
+      if (drive != null) {
+        await drive(tester);
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+
       await expectLater(
         find.byType(MaterialApp),
         matchesGoldenFile('goldens/${entry.key}.png'),
@@ -141,6 +148,25 @@ final Map<String, Widget Function()> _screens = {
   'image45-logs': () => const LogsScreen(),
   'login': () => const WithMeLoginScreen(),
   'help': () => const HelpScreen(),
+};
+
+/// Screens the design shows mid-interaction rather than untouched.
+///
+/// `image7` has a mood already chosen - the swatch is ringed and the scale
+/// names it back ("Pretty good today"). Capturing the screen as it first
+/// opens would put a blank state next to a filled one and call the gap a
+/// difference.
+final Map<String, Future<void> Function(WidgetTester)> _drivers = {
+  'image7to24-check-in': (tester) async {
+    final dots = find.descendant(
+      of: find.byType(MoodSelector),
+      matching: find.byType(GestureDetector),
+    );
+    if (dots.evaluate().length >= 4) {
+      await tester.tap(dots.at(3));
+      await tester.pump();
+    }
+  },
 };
 
 /// Goldens render with a blank test font unless the real faces are loaded, so
@@ -227,21 +253,55 @@ Future<void> _seedDatabase() async {
     'Domestic duties',
   ];
 
-  // 9:41 is the time every mockup's status bar shows. Fixing it keeps two
-  // captures taken on the same day identical.
+  // Answers, not prompts. The logs and day-detail screens show the first
+  // non-empty answer as the entry's one line, so seeding the questions back
+  // made every card read "What took the most out of me?". These are written
+  // in the voice the mockups use - short, specific, one thought each.
+  const answers = [
+    'Breathing before the meeting actually helped. Shoulders dropped.',
+    'Box breathing, 4 rounds. Slept better.',
+    'Hard morning. Logged it anyway.',
+    'Studied in 25-minute blocks instead of one long sit.',
+    'Put the phone in a drawer for the evening.',
+    'Too much on at once. Asked for the deadline to move.',
+    'Cooked properly for the first time this week.',
+  ];
+  const leanedOn = [
+    'Sam, over lunch.',
+    'Nobody - handled it myself.',
+    'Mum called at the right moment.',
+    'Study group.',
+    'My sister.',
+    'Told my manager.',
+    'Ade came round.',
+  ];
+
+  // Logged at different times of day, as image45 shows them (4:42 PM, 9:10
+  // PM, 7:55 AM) - a fixed 9:41 on every row made the screen look like it
+  // prints a constant. Driven off the index, so two captures taken on the
+  // same day are still identical.
+  const hours = [16, 21, 7, 13, 19, 8, 22];
+  const minutes = [42, 10, 55, 26, 3, 38, 14];
   final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day, 9, 41);
+  final midnight = DateTime(now.year, now.month, now.day);
   for (var back = 0; back < moods.length; back++) {
-    final date = today.subtract(Duration(days: back));
+    final day = midnight.subtract(Duration(days: back));
+    final date = DateTime(
+      day.year,
+      day.month,
+      day.day,
+      hours[back],
+      minutes[back],
+    );
     await db.insertMood(date, moods[back]);
     await db.insertControlGauge(date, 5 - (back % 4));
     await db.insertStressor(date, areas[back], detail: detail[back]);
     await db.insertReflection(
-      who: 'Who did I lean on today?',
-      what: 'What took the most out of me?',
-      when: 'When did I feel steadiest?',
-      where: 'Where did the stress start?',
-      why: 'Why did this matter to me?',
+      who: leanedOn[back],
+      what: answers[back],
+      when: 'Late morning, once the list was written down.',
+      where: areas[back],
+      why: 'It is the part I keep putting off.',
       date: date,
     );
   }

@@ -131,12 +131,10 @@ class ChartLegend extends StatelessWidget {
   const ChartLegend({
     super.key,
     required this.slices,
-    this.columns = 2,
     this.showPercent = true,
   });
 
   final List<Slice> slices;
-  final int columns;
   final bool showPercent;
 
   @override
@@ -159,11 +157,16 @@ class ChartLegend extends StatelessWidget {
       alignment: WrapAlignment.center,
       children: [
         for (final slice in slices)
-          SizedBox(
-            width: columns == 1
-                ? double.infinity
-                : (WithMeSpace.contentWidth - 2 * WithMeSpace.lg) / columns -
-                    WithMeSpace.md,
+          // Each entry takes the width of its own label and the Wrap decides
+          // where the line breaks, which is how image34 fits "Thought
+          // challenging" next to a short neighbour. Pinning every entry to
+          // half the card, as this did, ellipsised the long ones. The cap is
+          // the card's inner width, so an unusually long label drops to its
+          // own line instead of overflowing.
+          ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: WithMeSpace.contentWidth - 2 * WithMeSpace.lg,
+            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -302,12 +305,18 @@ class BarChart extends StatelessWidget {
     super.key,
     required this.values,
     this.color = WithMeColors.mint,
+    this.colors,
     this.highlightLast = true,
     this.height = 56,
   });
 
   final List<double> values;
   final Color color;
+
+  /// One colour per bar, cycled if shorter than [values]. image35 draws the
+  /// Signs chart across the series palette - mint, peach, pink, coral - not
+  /// in a single tint. Null keeps every bar on [color].
+  final List<Color>? colors;
 
   /// The design draws the most recent bar in full teal.
   final bool highlightLast;
@@ -330,9 +339,13 @@ class BarChart extends StatelessWidget {
               child: Container(
                 height: hi <= 0 ? 4 : (height * values[i] / hi).clamp(6, height),
                 decoration: BoxDecoration(
-                  color: highlightLast && i == values.length - 1
-                      ? WithMeColors.teal
-                      : color,
+                  color: switch (colors) {
+                    final palette? when palette.isNotEmpty =>
+                      palette[i % palette.length],
+                    _ => highlightLast && i == values.length - 1
+                        ? WithMeColors.teal
+                        : color,
+                  },
                   borderRadius: BorderRadius.circular(5),
                 ),
               ),

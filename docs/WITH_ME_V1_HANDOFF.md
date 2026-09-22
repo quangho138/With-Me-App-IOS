@@ -83,6 +83,65 @@ the wrong breathing screen, both breath shapes at two thirds their size, a
 blank page for a day with no entry, and logs listed oldest-first with all five
 reflection prompts crammed into each card.
 
+### What the numbers missed
+
+The rectangle report is blind to colour, wording and overflow, so a second
+pass read all 28 side-by-side sheets by eye. The count barely moved (71 → 70)
+while six real defects came out, which is the point — none of these were
+geometry:
+
+- **`WithMeText.caption` was `inkFaint`.** 2.6:1 on cream, under the 4.5:1
+  floor, on 13 pt text — while `body` at 15 pt already sat on the darker
+  `inkSoft`. The smaller size was carrying the weaker colour. Zooming
+  image7's "Rough / Okay / Good" shows dark slate glyphs, not pale grey.
+  Now `inkSoft`, which affects 29 call sites.
+- **"Keep going!" on the mint stat tile** inherited that same grey, landing
+  at roughly 2:1 against its own fill. Teal on the tinted tile only.
+- **The medical disclaimer on image44** was the faintest text on the screen.
+  Sampling the mockup puts both of that screen's text blocks at `ink`; the
+  build had the disclaimer on `inkSoft`. It is the one clinical caveat in the
+  app and should not be the hardest line to read.
+- **The Signs mini-chart on image35** drew four bars in one tint. The design
+  runs them across the series palette — mint, peach, pink, coral — so
+  `BarChart` gained an optional per-bar `colors`.
+- **"Thought challenging" ellipsised on image34.** `ChartLegend` pinned every
+  entry to half the card; the design lets each size to its own label and lets
+  the `Wrap` pick the line breaks. Now capped at the card's inner width so a
+  long label takes its own line instead of overflowing.
+- **The mood card came out 111 pt against a measured 170.** The caption
+  ("Pretty good today") was there all along but only appears once a mood is
+  picked, and the capture opened the screen untouched. `_drivers` in the
+  golden suite now taps the fourth swatch first. That exposed the real gap:
+  the design insets the swatch row 24 pt from the card edge — the pink circle
+  starts at x = 48 against a card edge of 24 — where `WithMeCard`'s default
+  is 16, which spread the five circles wider than the design draws them.
+
+Two fixture bugs came out with them. The seed wrote the reflection *prompts*
+into the answer columns, so every log card read "What took the most out of
+me?" while every other seeded field held a real value; and it stamped 9:41 on
+all seven days, which made the screen look like it printed a constant. Both
+now carry values in the voice image45 uses, still derived from the index so
+two captures on the same day stay identical.
+
+### Where the mockups disagree with each other
+
+Two differences are the document contradicting itself, not the build drifting.
+Changing either would break a screen that currently matches exactly, so both
+are left as they are:
+
+- **The date-range card.** image33 draws it as a row — "DATE RANGE" left,
+  "Last 14 days" right — and image34 draws it centred over two lines with a
+  date span. `DateRangeCard` is shared and follows image33, which it matches
+  exactly.
+- **Option row height.** 52 on image25 and image26, which measure clean; 59
+  on image38. `kOptionRowHeight` stays at 52 and image38's five rows report
+  −7.1 each.
+
+One number is honest rather than matching: the second mood bar on image37 is
+a short nub because a seeded "Rough" day scores 1 of 5. The mockup's sample
+data had no low day. Raising the floor would make the chart overstate the
+mood, so the bar stays short.
+
 ## Decisions you should know about
 
 **Fonts are a guess.** The design names none. Quicksand (UI) and Yellowtail
