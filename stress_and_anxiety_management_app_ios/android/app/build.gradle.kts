@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.stress_and_anxiety_management_app_ios"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "30.0.16248370"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

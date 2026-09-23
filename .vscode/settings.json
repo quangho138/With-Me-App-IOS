@@ -1,3 +1,5 @@
 {
-    "cmake.sourceDirectory": "C:/Users/lazy8/Stress-and-Anxiety-Management-App-iOS/stress_and_anxiety_management_app_ios/linux"
+    "cmake.sourceDirectory": "C:/Users/lazy8/Stress-and-Anxiety-Management-App-iOS/stress_and_anxiety_management_app_ios/linux",
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "cmake.ignoreCMakeListsMissing": true
 }
