@@ -212,16 +212,50 @@ These are drawn because the design draws them, and they do nothing:
 
 | | |
 |---|---|
-| **Web (Chrome)** | Builds and runs. Every screen renders and navigates. **Cannot persist** — sqflite has no web implementation, so anything that writes fails. |
+| **Web (Chrome)** | Builds, runs and **persists** — sqlite compiled to WebAssembly, stored in IndexedDB (`sqflite_common_ffi_web`). Ships with a demo account; see below. |
 | **iOS** | The real target. Cannot be built from Windows; needs macOS and Xcode. |
 | **Android** | Builds. `flutter build apk --debug` produces a 157 MB debug APK with the fonts and mascot bundled. Not run on a device — none attached. |
 | **Windows desktop** | Needs the Visual Studio "Desktop development with C++" workload, which is not installed. |
 
-Because the browser cannot persist, every database call is now wrapped: a
-failure shows a message and leaves the screen on its empty state. Before that,
-"Create account" sat disabled for ever on web with an uncaught exception behind
-it. That guard matters on a real device too — a database that will not open
-should not trap the user.
+Every database call is wrapped: a failure shows a message and leaves the
+screen on its empty state, so a database that will not open never traps the
+user.
+
+### The demo account
+
+For showing the app, the browser build signs in with:
+
+```
+demo@withme.app  /  withme123
+```
+
+`lib/Database/DemoAccount.dart` creates it on launch along with a week of
+check-ins (the user is "Maya", as in the mockups). It tops up any of the last
+seven days that has no mood on every launch, so "this week" stays populated
+whenever the demo happens; **today is left empty** so a check-in can be done
+live, and a day with a real entry is never touched. It is on by default only
+in the browser — a phone gets it only when built with
+`--dart-define=WITHME_DEMO=true`, so a real install never picks up invented
+rows.
+
+The browser engine needs `web/sqlite3.wasm` and `web/sqflite_sw.js`, which
+belong in the repo; after upgrading `sqflite_common_ffi_web`, regenerate them with
+`dart run sqflite_common_ffi_web:setup`. The package is imported through
+`WebFactory.dart`'s conditional export, so phone builds never compile it.
+
+Wiring this up exposed a race that was always there: `DatabaseHelper` cached
+the *database*, not the open, so two callers arriving before the first open
+finished each started their own and the second threw. On a phone the open is
+fast enough to hide it; in the browser the first open loads WebAssembly and
+takes seconds, and a sign-in during that window failed with "Couldn't read
+your account". It now caches the future.
+
+Verified in headless Chromium: wrong password rejected, demo sign-in lands on
+"Welcome back, Maya!", logs / progress / insights / calendar all populated,
+and a relaunch on the same profile keeps the data without duplicating it.
+(Point a persistent test profile at a short path — deep in a long temp
+directory IndexedDB exceeds Windows' 260-character limit and fails with
+"Internal error", which reads like an app bug and is not one.)
 
 ### What the Android build needed
 

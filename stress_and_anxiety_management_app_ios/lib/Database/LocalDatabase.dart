@@ -4,24 +4,56 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
+import 'WebFactory.dart';
+
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
   DatabaseHelper._internal();
 
-  static Database? _database;
+  /// The one open in flight or done. Caching the future rather than the
+  /// database matters: two callers arriving before the first open finishes
+  /// used to each start their own, and the second one threw. In the browser
+  /// the first open loads a WebAssembly engine and takes seconds, so a
+  /// sign-in during it failed with "Couldn't read your account".
+  static Future<Database>? _opening;
 
   // --- ValueNotifier to notify username changes ---
   final ValueNotifier<String?> userNameNotifier = ValueNotifier(null);
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDatabase();
-    await _loadUserNameNotifier(); // initialize the notifier
-    return _database!;
+  Future<Database> get database => _opening ??= _open();
+
+  Future<Database> _open() async {
+    try {
+      final db = await _initDatabase();
+      // Read straight off `db`: going through getUserName() would await
+      // `database`, which is this future, and never complete.
+      final result = await db.query('user', limit: 1);
+      userNameNotifier.value =
+          result.isNotEmpty ? result.first['name'] as String? : null;
+      return db;
+    } catch (_) {
+      // Let the next caller try again instead of handing out a failure.
+      _opening = null;
+      rethrow;
+    }
   }
 
   Future<Database> _initDatabase() async {
+    // In the browser there is no documents directory; the WebAssembly engine
+    // keeps the file in IndexedDB under this name instead.
+    final web = webDatabaseFactory();
+    if (web != null) {
+      return await web.openDatabase(
+        'reflections.db',
+        options: OpenDatabaseOptions(
+          version: 3,
+          onCreate: _onCreate,
+          onUpgrade: _onUpgrade,
+        ),
+      );
+    }
+
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     String path = join(documentsDirectory.path, 'reflections.db');
 
@@ -135,10 +167,6 @@ class DatabaseHelper {
     final db = await database;
     await db.delete('user');
     userNameNotifier.value = null; // notify listeners immediately
-  }
-
-  Future<void> _loadUserNameNotifier() async {
-    userNameNotifier.value = await getUserName();
   }
 
   // Reflection methods remain unchanged

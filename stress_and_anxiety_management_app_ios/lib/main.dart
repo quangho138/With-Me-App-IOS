@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
+import 'Database/DemoAccount.dart';
 
 import 'WithMe/Screens/AboutScreen.dart';
 import 'WithMe/Screens/BeforeWeStartScreen.dart';
@@ -32,6 +36,16 @@ import 'WithMe/Theme/WithMeTheme.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // The database is not wiped on launch — the logs have to survive a restart.
+  if (DemoAccount.enabled) {
+    // Not awaited: the welcome screen should not wait on a database open.
+    // Signing in takes long enough that the rows are there first, and a
+    // failure here must never keep the app from starting.
+    unawaited(
+      DemoAccount.ensure().catchError(
+        (Object e) => debugPrint('Demo account not seeded: $e'),
+      ),
+    );
+  }
   runApp(const WithMeApp());
 }
 
