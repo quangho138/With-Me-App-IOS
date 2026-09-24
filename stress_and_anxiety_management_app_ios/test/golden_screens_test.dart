@@ -122,6 +122,8 @@ final Map<String, Widget Function()> _screens = {
   'image6-monthly-calendar': () => const MonthlyCalendarScreen(),
   'image7to23-daily-check-in': () => const DailyCheckInScreen(),
   'image24-check-in': () => const CheckInScreen(),
+  'image15-signs-choice': () => const DailyCheckInScreen(initialStep: 5),
+  'intention-to-change': () => const DailyCheckInScreen(initialStep: 7),
   'image25-exercise-choose': () => const ExerciseChooseScreen(),
   'image26-rest-your-mind': () => const RestYourMindScreen(),
   'image27-breathing-478': () => const BreathingScreen(),
@@ -159,6 +161,19 @@ final Map<String, Widget Function()> _screens = {
 /// opens would put a blank state next to a filled one and call the gap a
 /// difference.
 final Map<String, Future<void> Function(WidgetTester)> _drivers = {
+  // The choice that decides which signs page follows.
+  'image15-signs-choice': (tester) async {
+    await tester.tap(find.text('MIND'));
+    await tester.pump();
+  },
+  // Just left of upright on the dial - "Somewhat ready", as the product
+  // owner's screen shows it.
+  'intention-to-change': (tester) async {
+    final gauge = find.byType(ReadinessGauge);
+    final box = tester.getRect(gauge);
+    await tester.tapAt(Offset(box.center.dx - 12, box.bottom - 90));
+    await tester.pump();
+  },
   'image7to23-daily-check-in': (tester) async {
     final dots = find.descendant(
       of: find.byType(MoodSelector),

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../Database/LocalDatabase.dart';
 import '../Components/WithMeCards.dart';
 import '../Components/WithMeScaffold.dart';
-import '../Mascot/MascotExpression.dart';
 import '../Mascot/WithMeAvatar.dart';
 import '../Theme/WithMeTheme.dart';
 import 'CheckInScreen.dart';
@@ -56,9 +55,9 @@ class _WithMeHomeScreenState extends State<WithMeHomeScreen> {
         children: [
           _MenuHeader(onTap: () => _go(const MenuScreen())),
           const SizedBox(height: WithMeSpace.lg),
-          const Center(
-            child: WithMeAvatar(size: 99, expression: MascotExpression.happy),
-          ),
+          // Waves hello, then wanders the width of the page - stopping to
+          // wave again, or to plop onto its behind and get back up.
+          const WithMeAvatar(size: 99, behavior: MascotBehavior.roam),
           const SizedBox(height: WithMeSpace.lg),
           WithMeCard(
             radius: 20,

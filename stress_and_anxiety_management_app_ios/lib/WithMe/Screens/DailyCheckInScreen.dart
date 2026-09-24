@@ -13,10 +13,12 @@ import 'YourDayScreen.dart';
 /// Today's guided check-in — `image7.png` through `image23.png`, opened from
 /// today's date on the monthly calendar.
 ///
-/// Thirteen pages: mood, stress, motivation, where the stress is coming from,
-/// which stressors, the signs intro, then one page per dimension (body,
-/// feelings, mind, behaviour), the intention gauge, strategies and the
-/// strategy detail. The five-part self-reflection that used to close it
+/// Ten pages: mood, stress, motivation, where the stress is coming from,
+/// which stressors, a choice of body / feelings / mind / behaviour, the one
+/// page for whichever was chosen, the intention-to-change dial, strategies
+/// and the strategy detail.
+///
+/// Continue stays disabled until the page is answered; back always works. The five-part self-reflection that used to close it
 /// (`image24`) is now the Check In section on its own - see `CheckInScreen`.
 ///
 /// Answers land in the existing tables on the way out — `insertMood`,
@@ -32,7 +34,10 @@ class DailyCheckInScreen extends StatefulWidget {
 
   static const String route = '/daily-check-in';
 
-  static const int pageCount = 13;
+  static const int pageCount = 10;
+
+  /// The page that depends on the body / feelings / mind / behaviour choice.
+  static const int signsPage = 6;
 
   /// Each page's heading, in order - what the calendar lists for today.
   /// Keep it in step with `_step`.
@@ -43,9 +48,10 @@ class DailyCheckInScreen extends StatefulWidget {
         'How motivated do you feel to make a positive change today?',
         'Where is most of your stress coming from right now?',
         "What's weighing on you?",
-        'What are the signs?',
-        for (final dimension in SignDimension.values) dimension.question,
-        'What is your intention today?',
+        'What are the signs? Body, feelings, mind or behavior',
+        // One page, whichever the previous choice named.
+        'How stress is showing up for you',
+        'Intention to change',
         'Select strategies and actions',
         'Strategy details',
       ];
@@ -59,7 +65,13 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
   final _db = DatabaseHelper();
   final _customStressor = TextEditingController();
 
-  late int _index = widget.initialStep;
+  /// Where this visit began. The signs page cannot open on its own - it
+  /// needs the choice before it - so asking for it starts one page earlier.
+  late final int _start = widget.initialStep == DailyCheckInScreen.signsPage
+      ? DailyCheckInScreen.signsPage - 1
+      : widget.initialStep;
+
+  late int _index = _start;
 
   /// Which way the last move went, so the transition slides with it.
   bool _forward = true;
@@ -100,7 +112,7 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
     // Back from the page this visit started on returns to wherever it was
     // opened from - the calendar - rather than walking into pages the user
     // chose to skip.
-    if (_index == widget.initialStep) {
+    if (_index == _start) {
       Navigator.of(context).pop();
       return;
     }
@@ -144,12 +156,17 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
       await _db.insertControlGauge(today, 6 - _answers.stress!);
     }
     if (_answers.area != null) {
+      // Signs share the stressor's detail column - there is no signs table -
+      // and only the chosen dimension's count; the others were never shown.
+      final dimension = _answers.signDimension;
+      final detail = [
+        ..._answers.stressors,
+        if (dimension != null) ..._answers.signs[dimension]!,
+      ];
       await _db.insertStressor(
         today,
         _answers.area!,
-        detail: _answers.stressors.isEmpty
-            ? null
-            : _answers.stressors.join(', '),
+        detail: detail.isEmpty ? null : detail.join(', '),
       );
     }
   }
@@ -166,7 +183,10 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
     return WithMeScaffold(
       lockup: !_showsProgress,
       onBack: _back,
-      action: WithMeButton(label: _actionLabel, onPressed: _next),
+      action: WithMeButton(
+        label: _actionLabel,
+        onPressed: _answered ? _next : null,
+      ),
       scrollable: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -193,7 +213,7 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
               ),
               child: KeyedSubtree(
                 key: ValueKey(_index),
-                child: _step(_index),
+                child: _StepMood(expression: _reaction, child: _step(_index)),
               ),
             ),
           ),
@@ -202,7 +222,7 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
     );
   }
 
-  /// The thirteen steps, in the order the document walks them.
+  /// The ten steps, in order.
   Widget _step(int index) => switch (index) {
         0 => _MoodStep(answers: _answers, name: _name, onChanged: _touch),
         1 => _ScaleStep(
@@ -231,15 +251,70 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
             custom: _customStressor,
             onChanged: _touch,
           ),
-        5 => const _SignsIntroStep(),
-        6 || 7 || 8 || 9 => _SignsStep(
-            dimension: SignDimension.values[index - 6],
+        5 => _SignsIntroStep(answers: _answers, onChanged: _touch),
+        6 => _SignsStep(
+            dimension: _answers.signDimension ?? SignDimension.body,
             answers: _answers,
             onChanged: _touch,
           ),
-        10 => _IntentionStep(answers: _answers, onChanged: _touch),
-        11 => _StrategyStep(answers: _answers, onChanged: _touch),
+        7 => _IntentionStep(answers: _answers, onChanged: _touch),
+        8 => _StrategyStep(answers: _answers, onChanged: _touch),
         _ => _StrategyDetailStep(answers: _answers, onChanged: _touch),
+      };
+
+  /// How the mascot feels about the current page's answer. Idle - alive but
+  /// waiting - until something is picked; then hard answers make it sad,
+  /// middling ones get a smirk, good ones a happy hop. Naming a stressor or a
+  /// sign gets gentle concern rather than a frown.
+  MascotExpression get _reaction {
+    MascotExpression scale(int? v, {bool highIsGood = true}) {
+      if (v == null || v < 1) return MascotExpression.idle;
+      final good = highIsGood ? v >= 4 : v <= 2;
+      final bad = highIsGood ? v <= 2 : v >= 4;
+      return good
+          ? MascotExpression.happy
+          : bad
+              ? MascotExpression.sad
+              : MascotExpression.smirk;
+    }
+
+    final a = _answers;
+    return switch (_index) {
+      // Mood runs 0 (Rough) to 4 (Good).
+      0 => scale(a.mood == null ? null : a.mood! + 1),
+      1 => scale(a.stress, highIsGood: false),
+      2 => scale(a.motivation),
+      3 => a.area == null ? MascotExpression.idle : MascotExpression.concerned,
+      4 => a.stressors.isEmpty
+          ? MascotExpression.idle
+          : MascotExpression.concerned,
+      // Body, feelings, mind or behaviour is neither good nor bad news.
+      5 => a.signDimension == null
+          ? MascotExpression.idle
+          : MascotExpression.smirk,
+      6 => (a.signs[a.signDimension]?.isEmpty ?? true)
+          ? MascotExpression.idle
+          : MascotExpression.concerned,
+      7 => scale(a.readiness == null
+          ? null
+          : ReadinessGauge.levelOf(a.readiness!) + 1),
+      8 => a.strategy == null ? MascotExpression.idle : MascotExpression.happy,
+      _ => scale(a.rating),
+    };
+  }
+
+  /// Whether the current page has what it asks for. Continue waits on it.
+  bool get _answered => switch (_index) {
+        0 => _answers.mood != null,
+        1 => _answers.stress != null,
+        2 => _answers.motivation != null,
+        3 => _answers.area != null,
+        4 => _answers.stressors.isNotEmpty,
+        5 => _answers.signDimension != null,
+        6 => _answers.signs[_answers.signDimension]?.isNotEmpty ?? false,
+        7 => _answers.readiness != null,
+        8 => _answers.strategy != null && _answers.action != null,
+        _ => _answers.rating > 0,
       };
 
   String get _actionLabel =>
@@ -296,7 +371,7 @@ class _MoodStep extends StatelessWidget {
         ),
         const Spacer(),
         const Center(
-          child: WithMeAvatar(size: 120, expression: MascotExpression.listening),
+          child: _StepMascot(size: 120),
         ),
         const Spacer(),
         const ReassuranceCard(text: 'No number, no score. Just how it feels.'),
@@ -358,10 +433,7 @@ class _ScaleStep extends StatelessWidget {
         ],
         const Spacer(),
         Center(
-          child: WithMeAvatar(
-            size: mascotSize,
-            expression: MascotExpression.thinking,
-          ),
+          child: _StepMascot(size: mascotSize),
         ),
         const Spacer(),
       ],
@@ -420,7 +492,7 @@ class _AreaStep extends StatelessWidget {
         ),
         const Spacer(),
         const Center(
-          child: WithMeAvatar(size: 110, expression: MascotExpression.listening),
+          child: _StepMascot(size: 110),
         ),
         const Spacer(),
       ],
@@ -455,7 +527,7 @@ class _StressorStep extends StatelessWidget {
           WithMeField(controller: custom, hint: 'Add a custom stressor...'),
           const Spacer(),
           const Center(
-            child: WithMeAvatar(size: 71, expression: MascotExpression.listening),
+            child: _StepMascot(size: 71),
           ),
           const Spacer(),
         ],
@@ -517,7 +589,7 @@ class _StressorStep extends StatelessWidget {
         ),
         const Spacer(),
         const Center(
-          child: WithMeAvatar(size: 71, expression: MascotExpression.listening),
+          child: _StepMascot(size: 71),
         ),
         const Spacer(),
       ],
@@ -536,7 +608,10 @@ class _StressorStep extends StatelessWidget {
 // --- image15 ----------------------------------------------------------------
 
 class _SignsIntroStep extends StatelessWidget {
-  const _SignsIntroStep();
+  const _SignsIntroStep({required this.answers, required this.onChanged});
+
+  final CheckInAnswers answers;
+  final void Function(VoidCallback) onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -544,7 +619,10 @@ class _SignsIntroStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         WithMeCard(
+          // Measured 340 x 128 on image15.
+          minHeight: 128,
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _Formula(
                 lead: 'Stressor = ',
@@ -559,27 +637,32 @@ class _SignsIntroStep extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: WithMeSpace.lg),
+        // image15 draws these as left-aligned pills, one already picked -
+        // measured 172 x ~50, 15 pt radius, 10 apart, 36 below the card.
+        const SizedBox(height: 36),
         for (final dimension in SignDimension.values) ...[
-          Padding(
-            padding: const EdgeInsets.only(bottom: kOptionRowGap),
-            child: OptionRow(
-              label: dimension.label,
-              dot: dimension.color,
-              selected: false,
-              onTap: () {},
+          Align(
+            alignment: Alignment.centerLeft,
+            // A choice, not a list: whichever is picked decides the one
+            // page that follows ("How is stress showing up in your body?").
+            child: _SignChoice(
+              dimension: dimension,
+              selected: answers.signDimension == dimension,
+              onTap: () =>
+                  onChanged(() => answers.signDimension = dimension),
             ),
           ),
+          const SizedBox(height: 10),
         ],
-        const SizedBox(height: WithMeSpace.sm),
+        const SizedBox(height: WithMeSpace.lg),
         Text(
           'What are the signs?',
           textAlign: TextAlign.center,
-          style: WithMeText.question.copyWith(fontSize: 19),
+          style: WithMeText.question.copyWith(fontSize: 22),
         ),
         const Spacer(),
         const Center(
-          child: WithMeAvatar(size: 66, expression: MascotExpression.thinking),
+          child: _StepMascot(size: 66),
         ),
         const Spacer(),
       ],
@@ -658,7 +741,9 @@ class _SignsStep extends StatelessWidget {
   }
 }
 
-// --- image20 ----------------------------------------------------------------
+// --- Intention to change ----------------------------------------------------
+// The product owner's revised screen, replacing the image20 "What is your
+// intention today?" list: one dial, read as how ready the user feels.
 
 class _IntentionStep extends StatelessWidget {
   const _IntentionStep({required this.answers, required this.onChanged});
@@ -666,28 +751,59 @@ class _IntentionStep extends StatelessWidget {
   final CheckInAnswers answers;
   final void Function(VoidCallback) onChanged;
 
+  static const List<String> _notes = [
+    'Not today is an honest answer too. Noticing it is a step.',
+    "A little is still a start. We'll keep it small.",
+    'Somewhere in the middle is the most honest answer most days — and it '
+        'is enough.',
+    "Ready is a good place to be. Let's pick one small thing.",
+    "Let's use that energy — one step at a time.",
+  ];
+
   @override
   Widget build(BuildContext context) {
-    // The needle reads the stress rating from step 2.
-    final stress = answers.stress ?? 3;
+    final readiness = answers.readiness;
+    final level =
+        readiness == null ? null : ReadinessGauge.levelOf(readiness);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const QuestionCard(question: 'What is your intention today?'),
+        const QuestionCard(question: 'Intention to change', minHeight: 64),
+        const SizedBox(height: WithMeSpace.lg),
+        Text(
+          'How ready do you feel to do something differently today?',
+          textAlign: TextAlign.center,
+          style: WithMeText.body.copyWith(color: WithMeColors.ink),
+        ),
         const SizedBox(height: WithMeSpace.md),
-        Center(child: IntentionGauge(value: (stress - 1) / 4)),
-        const SizedBox(height: WithMeSpace.md),
-        for (final option in kIntentions)
-          Padding(
-            padding: const EdgeInsets.only(bottom: kOptionRowGap),
-            child: OptionRow(
-              label: option.label,
-              dot: option.color,
-              selected: answers.intention == option.label,
-              onTap: () => onChanged(() => answers.intention = option.label),
-            ),
+        Center(
+          child: ReadinessGauge(
+            value: readiness,
+            onChanged: (v) => onChanged(() {
+              answers.readiness = v;
+              answers.intention =
+                  ReadinessGauge.levels[ReadinessGauge.levelOf(v)];
+            }),
           ),
+        ),
+        const SizedBox(height: WithMeSpace.sm),
+        Text(
+          level == null ? 'Drag the needle' : ReadinessGauge.levels[level],
+          textAlign: TextAlign.center,
+          style: level == null
+              ? WithMeText.caption
+              : WithMeText.option.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: WithMeColors.teal,
+                ),
+        ),
+        const SizedBox(height: WithMeSpace.md),
+        ReassuranceCard(text: _notes[level ?? 2]),
+        const Spacer(),
+        const Center(
+          child: _StepMascot(size: 90),
+        ),
         const Spacer(),
       ],
     );
@@ -951,7 +1067,7 @@ class _StrategyDetailStep extends StatelessWidget {
         ),
         const Spacer(),
         const Center(
-          child: WithMeAvatar(size: 78, expression: MascotExpression.encouraging),
+          child: _StepMascot(size: 78),
         ),
         const Spacer(),
       ],
@@ -983,4 +1099,91 @@ class _Line extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// Hands the current page's [_DailyCheckInScreenState._reaction] down to
+/// whichever mascot the page draws, without threading it through every
+/// step's constructor.
+class _StepMood extends InheritedWidget {
+  const _StepMood({required this.expression, required super.child});
+
+  final MascotExpression expression;
+
+  static MascotExpression of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_StepMood>()?.expression ??
+      MascotExpression.idle;
+
+  @override
+  bool updateShouldNotify(_StepMood old) => old.expression != expression;
+}
+
+/// The mascot on a check-in page, reacting to the answer.
+class _StepMascot extends StatelessWidget {
+  const _StepMascot({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) =>
+      WithMeAvatar(size: size, expression: _StepMood.of(context));
+}
+
+/// One of body / feelings / mind / behaviour on the signs page (`image15`).
+class _SignChoice extends StatelessWidget {
+  const _SignChoice({
+    required this.dimension,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final SignDimension dimension;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: dimension.label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: WithMeMotion.fast,
+          width: 172,
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: WithMeSpace.lg),
+          decoration: BoxDecoration(
+            color: selected ? WithMeColors.teal : WithMeColors.cream,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: WithMeSpace.cardShadow,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: dimension.color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: WithMeSpace.md),
+              Text(
+                dimension.label,
+                style: WithMeText.option.copyWith(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
+                  color: selected ? Colors.white : WithMeColors.ink,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

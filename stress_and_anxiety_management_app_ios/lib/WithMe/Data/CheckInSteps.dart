@@ -246,6 +246,15 @@ class CheckInAnswers {
   final Map<SignDimension, Set<String>> signs = {
     for (final d in SignDimension.values) d: <String>{},
   };
+
+  /// Which of body, feelings, mind or behaviour the user chose to look at.
+  /// Only that one dimension's page follows.
+  SignDimension? signDimension;
+
+  /// 0 (not ready) to 1 (very ready) on the intention-to-change dial.
+  double? readiness;
+
+  /// The dial's reading in words - "Somewhat ready".
   String? intention;
   String? strategy;
   String? action;

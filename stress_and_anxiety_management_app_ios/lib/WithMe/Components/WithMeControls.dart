@@ -87,7 +87,11 @@ class OptionRow extends StatelessWidget {
               ),
               const SizedBox(width: WithMeSpace.md),
             ] else if (icon != null) ...[
-              Icon(icon, size: 19, color: onTeal ? Colors.white : WithMeColors.teal),
+              Icon(
+                icon,
+                size: 19,
+                color: onTeal ? Colors.white : WithMeColors.teal,
+              ),
               const SizedBox(width: WithMeSpace.md),
             ],
             Expanded(
@@ -427,28 +431,34 @@ class WithMeButton extends StatelessWidget {
         : (filled ? WithMeColors.teal : WithMeColors.cream);
     final ink = filled || danger ? Colors.white : WithMeColors.teal;
 
-    return Opacity(
-      opacity: onPressed == null ? 0.45 : 1,
-      child: GestureDetector(
-        onTap: onPressed,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          height: height,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: fill,
-            borderRadius: BorderRadius.circular(WithMeSpace.radiusMd),
-            boxShadow: WithMeSpace.cardShadow,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(label, style: WithMeText.button.copyWith(color: ink)),
-              if (icon != null) ...[
-                const SizedBox(width: WithMeSpace.sm),
-                Icon(icon, size: 19, color: ink),
+    // Announced as a button even while disabled - "Continue, dimmed" tells a
+    // screen-reader user there is a step waiting on them; bare text would not.
+    return Semantics(
+      button: true,
+      enabled: onPressed != null,
+      child: Opacity(
+        opacity: onPressed == null ? 0.45 : 1,
+        child: GestureDetector(
+          onTap: onPressed,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            height: height,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: fill,
+              borderRadius: BorderRadius.circular(WithMeSpace.radiusMd),
+              boxShadow: WithMeSpace.cardShadow,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(label, style: WithMeText.button.copyWith(color: ink)),
+                if (icon != null) ...[
+                  const SizedBox(width: WithMeSpace.sm),
+                  Icon(icon, size: 19, color: ink),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -514,11 +524,7 @@ class SegmentedTabs extends StatelessWidget {
 /// The segmented progress bar across the top of a check-in step
 /// (`image8`, `image9`).
 class StepProgressBar extends StatelessWidget {
-  const StepProgressBar({
-    super.key,
-    required this.count,
-    required this.index,
-  });
+  const StepProgressBar({super.key, required this.count, required this.index});
 
   final int count;
   final int index;
@@ -699,7 +705,10 @@ class ToggleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: kToggleRowHeight,
-      padding: const EdgeInsets.only(left: WithMeSpace.lg, right: WithMeSpace.md),
+      padding: const EdgeInsets.only(
+        left: WithMeSpace.lg,
+        right: WithMeSpace.md,
+      ),
       decoration: BoxDecoration(
         color: WithMeColors.cream,
         borderRadius: BorderRadius.circular(WithMeSpace.radiusMd),
@@ -763,8 +772,7 @@ class MenuRow extends StatelessWidget {
                 ),
               ),
             ),
-            if (trailing != null)
-              Text(trailing!, style: WithMeText.caption),
+            if (trailing != null) Text(trailing!, style: WithMeText.caption),
           ],
         ),
       ),
@@ -822,8 +830,9 @@ class WithMeBottomNav extends StatelessWidget {
                         color: i == index
                             ? WithMeColors.teal
                             : WithMeColors.inkFaint,
-                        fontWeight:
-                            i == index ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: i == index
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                       ),
                     ),
                   ],
@@ -887,10 +896,8 @@ class IntentionGauge extends StatelessWidget {
       tween: Tween(begin: 0, end: value.clamp(0, 1)),
       duration: WithMeMotion.slow,
       curve: WithMeMotion.ease,
-      builder: (context, v, _) => CustomPaint(
-        size: Size(size, size * 0.62),
-        painter: _GaugePainter(v),
-      ),
+      builder: (context, v, _) =>
+          CustomPaint(size: Size(size, size * 0.62), painter: _GaugePainter(v)),
     );
   }
 }
@@ -918,7 +925,8 @@ class _GaugePainter extends CustomPainter {
     canvas.drawArc(rect, math.pi, math.pi, false, arc);
 
     final angle = math.pi + math.pi * value;
-    final tip = centre + Offset(math.cos(angle), math.sin(angle)) * (radius - 16);
+    final tip =
+        centre + Offset(math.cos(angle), math.sin(angle)) * (radius - 16);
     canvas.drawLine(
       centre,
       tip,
@@ -933,4 +941,170 @@ class _GaugePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GaugePainter old) => old.value != value;
+}
+
+/// "How ready do you feel to do something differently today?" - the dial on
+/// the product owner's Intention to change screen.
+///
+/// Three flat bands - mint, peach, coral - round a pale dial face, with the
+/// needle as the answer: drag or tap anywhere on it. Null [value] means not
+/// answered yet; the needle then rests upright and faded.
+class ReadinessGauge extends StatelessWidget {
+  const ReadinessGauge({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.size = 200,
+  });
+
+  /// 0 (not ready) to 1 (very ready), or null before the first touch.
+  final double? value;
+  final ValueChanged<double> onChanged;
+  final double size;
+
+  static const List<String> levels = [
+    'Not ready yet',
+    'A little ready',
+    'Somewhat ready',
+    'Ready',
+    'Very ready',
+  ];
+
+  /// Which of [levels] a value falls in.
+  static int levelOf(double value) =>
+      (value * levels.length).floor().clamp(0, levels.length - 1);
+
+  // Proportions read off the product owner's screen, in units of the band
+  // radius R: bands 0.36 R thick, the needle pivoting 0.54 R below their
+  // centre under a 0.72 R dial face that fades out downward.
+  static const double _drop = 0.54;
+
+  double get _radius => size / 2;
+  double get _height => _radius * (1 + _drop) + 4;
+
+  void _track(Offset local) {
+    final centre = Offset(size / 2, _radius * (1 + _drop));
+    final d = local - centre;
+    // Straight left is 0, straight up is 0.5, straight right is 1. A touch
+    // below the pivot pins to whichever end it is nearer.
+    final angle = math.atan2(-d.dy, d.dx).clamp(0.0, math.pi);
+    onChanged(1 - angle / math.pi);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = value;
+    // Screen readers step a level at a time, and Flutter requires the
+    // values either side to be announced alongside the current one.
+    final up = ((v ?? 0.5) + 0.2).clamp(0.0, 1.0);
+    final down = ((v ?? 0.5) - 0.2).clamp(0.0, 1.0);
+    return Semantics(
+      slider: true,
+      label: 'How ready you feel to change',
+      value: v == null ? 'Not set' : levels[levelOf(v)],
+      increasedValue: levels[levelOf(up)],
+      decreasedValue: levels[levelOf(down)],
+      onIncrease: () => onChanged(up),
+      onDecrease: () => onChanged(down),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (e) => _track(e.localPosition),
+        onPanStart: (e) => _track(e.localPosition),
+        onPanUpdate: (e) => _track(e.localPosition),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(end: v ?? 0.5),
+          duration: WithMeMotion.fast,
+          curve: WithMeMotion.ease,
+          builder: (context, shown, _) => CustomPaint(
+            size: Size(size, _height),
+            painter: _ReadinessPainter(shown, answered: v != null),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReadinessPainter extends CustomPainter {
+  _ReadinessPainter(this.value, {required this.answered});
+
+  final double value;
+  final bool answered;
+
+  /// Band boundaries as fractions of the sweep, read off the screen the
+  /// product owner supplied.
+  static const List<(double, double, Color)> _bands = [
+    (0.00, 0.45, WithMeColors.mint),
+    (0.45, 0.66, WithMeColors.peach),
+    (0.66, 1.00, WithMeColors.coral),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final outer = size.width / 2;
+    final bandCentre = Offset(size.width / 2, outer);
+    final pivot = bandCentre + Offset(0, outer * ReadinessGauge._drop);
+    final inner = outer * 0.64;
+
+    for (final (from, to, color) in _bands) {
+      final path = Path()
+        ..addArc(
+          Rect.fromCircle(center: bandCentre, radius: outer),
+          math.pi + math.pi * from,
+          math.pi * (to - from),
+        )
+        ..arcTo(
+          Rect.fromCircle(center: bandCentre, radius: inner),
+          math.pi + math.pi * to,
+          -math.pi * (to - from),
+          false,
+        )
+        ..close();
+      canvas.drawPath(path, Paint()..color = color);
+    }
+
+    // Dial face: a half disc round the pivot, solid at the top and gone by
+    // the bottom, laid over the inside of the bands.
+    final face = outer * 0.72;
+    final faceRect = Rect.fromCircle(center: pivot, radius: face);
+    canvas.drawArc(
+      faceRect,
+      math.pi,
+      math.pi,
+      true,
+      Paint()
+        ..shader =
+            LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                WithMeColors.cream.withValues(alpha: 0.95),
+                WithMeColors.cream.withValues(alpha: 0.0),
+              ],
+            ).createShader(
+              Rect.fromLTRB(
+                faceRect.left,
+                faceRect.top,
+                faceRect.right,
+                pivot.dy,
+              ),
+            ),
+    );
+
+    final angle = math.pi + math.pi * value;
+    final tip = pivot + Offset(math.cos(angle), math.sin(angle)) * outer * 0.92;
+    final ink = WithMeColors.tealInk.withValues(alpha: answered ? 1 : 0.3);
+    canvas.drawLine(
+      pivot,
+      tip,
+      Paint()
+        ..color = ink
+        ..strokeWidth = 5
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ReadinessPainter old) =>
+      old.value != value || old.answered != answered;
 }

@@ -1,32 +1,37 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../Theme/WithMeTheme.dart';
 import 'MascotExpression.dart';
+import 'MascotPainter.dart';
 
-/// The With Me companion.
+/// How the companion spends its time.
+enum MascotBehavior {
+  /// Stays put, but alive: breathes, blinks, fidgets with its hands, and
+  /// reacts whenever [WithMeAvatar.expression] changes.
+  idle,
+
+  /// The home screen routine: a wave hello, then wandering the width of the
+  /// stage - stopping now and then to wave again or to plop onto its behind
+  /// and get back up.
+  roam,
+}
+
+/// The With Me companion, drawn and animated.
 ///
 /// ## About the art
 ///
-/// The V1 design document ships no character art — the mascot exists only
-/// baked into 45 screenshots, about 120 px tall. `tool/extract_mascot.py`
-/// lifts the largest clean instance (`image1.png`) off the page gradient and
-/// mattes it to transparency; that is what `assets/mascot/mascot_wave.png` is.
+/// The V1 document ships no character art - the mascot existed only baked
+/// into its screenshots, one pose, one face. That could not wave, walk or
+/// look sad, so the app draws the character itself ([MascotPainter]): the
+/// same leaf crown, hibiscus, lei and belly swirl, with limbs and a face
+/// that move. Every animation here is a function from time to a
+/// [MascotPose].
 ///
-/// Two consequences, both deliberate and both temporary:
-///
-///   * It is **one pose**. [MascotExpression] still selects the character's
-///     *motion* — a celebrating hop reads differently from an idle breath —
-///     but the face does not change. The enum is kept because it is the
-///     interface every screen already talks to.
-///   * At the 200 pt hero size the design uses, upscaled 103 px source art is
-///     visibly soft.
-///
-/// Transparent PNGs at 3x, one per expression, would fix both and change
-/// nothing outside this file — see the mascot note in
-/// `docs/WITH_ME_SPEC_V1.md`. `MascotPainter` is kept alongside as the vector
-/// fallback if the bitmap proves too soft to ship.
+/// Reduced motion (the platform setting, or [animate] false) holds a still
+/// pose that still shows the current [expression].
 class WithMeAvatar extends StatefulWidget {
   const WithMeAvatar({
     super.key,
@@ -34,121 +39,531 @@ class WithMeAvatar extends StatefulWidget {
     this.size = 180,
     this.speaking = false,
     this.animate = true,
+    this.behavior = MascotBehavior.idle,
     this.onTap,
   });
 
   final MascotExpression expression;
 
-  /// Width. The widget lays out [size] wide by `size * 1.4175` tall.
+  /// The character's width; it stands [size] * 1.4 tall. When roaming, the
+  /// widget takes the full width it is given and the character walks it.
   final double size;
 
-  /// Retained for API compatibility with the previous vector avatar. A bitmap
-  /// has no mouth to drive, so this now only adds a slight lean while talking.
+  /// Moves the mouth while the companion is "talking".
   final bool speaking;
 
-  /// Allows motion to be switched off for reduced-motion users and tests.
+  /// Off for reduced motion and for tests that need a still frame.
   final bool animate;
 
+  final MascotBehavior behavior;
+
   final VoidCallback? onTap;
+
+  static const double aspect =
+      MascotPainter.designHeight / MascotPainter.designWidth;
 
   @override
   State<WithMeAvatar> createState() => _WithMeAvatarState();
 }
 
-/// The shipped art is 309 x 438.
-const double _aspect = 438 / 309;
-
-/// Fraction of the asset's width the head spans.
-const double _headWidth = 0.74;
-
-/// Where the centre of the head sits, as a fraction of the asset's height.
-const double _headCentreY = 0.30;
-
-const String _asset = 'assets/mascot/mascot_wave.png';
-
 class _WithMeAvatarState extends State<WithMeAvatar>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _breath;
+  late final Ticker _ticker = createTicker(_tick);
+  late final ValueNotifier<MascotFrame> _frame =
+      ValueNotifier(MascotFrame(_poseAt(0)));
+
+  /// Seconds since the avatar appeared.
+  double _t = 0;
+
+  /// When [WithMeAvatar.expression] last changed, for the reaction.
+  double? _reactedAt;
+
+  /// Stage width while roaming, for pacing the walk.
+  double _stage = 0;
+
+  bool get _moving =>
+      widget.animate && !(MediaQuery.maybeDisableAnimationsOf(context) ?? false);
 
   @override
-  void initState() {
-    super.initState();
-    _breath = AnimationController(
-      vsync: this,
-      duration: WithMeMotion.breath,
-    );
-    if (widget.animate) _breath.repeat(reverse: true);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncTicker();
   }
 
   @override
   void didUpdateWidget(covariant WithMeAvatar old) {
     super.didUpdateWidget(old);
-    if (widget.animate && !_breath.isAnimating) {
-      _breath.repeat(reverse: true);
-    } else if (!widget.animate && _breath.isAnimating) {
-      _breath.stop();
+    if (old.expression != widget.expression) _reactedAt = _t;
+    _syncTicker();
+    _frame.value = _frameAt(_t);
+  }
+
+  void _syncTicker() {
+    if (_moving && !_ticker.isActive) {
+      _ticker.start();
+    } else if (!_moving && _ticker.isActive) {
+      _ticker.stop();
+      _frame.value = _frameAt(_t);
     }
+  }
+
+  void _tick(Duration elapsed) {
+    _t = elapsed.inMicroseconds / 1e6;
+    _frame.value = _frameAt(_t);
   }
 
   @override
   void dispose() {
-    _breath.dispose();
+    _ticker.dispose();
+    _frame.dispose();
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Choreography
+  // ---------------------------------------------------------------------------
+
+  MascotFrame _frameAt(double t) {
+    if (widget.behavior == MascotBehavior.roam && _moving) {
+      return _Routine(stageFraction: _walkPace).frameAt(t, _idle);
+    }
+    return MascotFrame(_poseAt(t));
+  }
+
+  /// Seconds to cross the whole stage, so the walk keeps a steady pace
+  /// whatever the screen width.
+  double get _walkPace {
+    final travel = math.max(1.0, _stage - widget.size);
+    return (travel / 55).clamp(2.2, 6.0);
+  }
+
+  MascotPose _idle(double t, {MascotFace? face}) =>
+      _poseAt(t, faceOverride: face);
+
+  /// The standing pose for [widget.expression] at time [t]: breath, blinks,
+  /// fidgeting hands, then whatever the expression and a fresh reaction add.
+  MascotPose _poseAt(double t, {MascotFace? faceOverride}) {
+    if (!_movingSafe) {
+      return _expressionPose(widget.expression, 0, 0.5);
+    }
+
+    final breath = 0.5 - 0.5 * math.cos(2 * math.pi * t / 3.4);
+    final base = _expressionPose(widget.expression, t, breath);
+
+    // Blinks at an irregular-looking but repeatable rhythm, sometimes twice.
+    final cycle = (t / 3.7).floor();
+    final phase = t - cycle * 3.7;
+    double blink = _pulse(phase, 3.52, 0.16);
+    if (cycle % 3 == 1) blink = math.max(blink, _pulse(phase, 3.18, 0.14));
+
+    // Hands never quite still - the "alive, waiting" look.
+    final fidgetL = 0.07 * math.sin(t * 1.9) + 0.04 * math.sin(t * 3.1 + 1);
+    final fidgetR = 0.07 * math.sin(t * 1.6 + 1.3) + 0.04 * math.sin(t * 2.7);
+    // An occasional glance around.
+    final lookX = 3.2 * _smoothSquare(math.sin(t * 0.55));
+
+    var pose = _copy(
+      base,
+      breath: breath,
+      blink: math.max(base.blink, blink),
+      leftArm: base.leftArm + fidgetL,
+      rightArm: base.rightArm + fidgetR,
+      tilt: base.tilt + 0.02 * math.sin(t * 0.9),
+      look: base.look + Offset(lookX, 0),
+      talk: widget.speaking ? 0.5 + 0.5 * math.sin(t * 14) : 0,
+      face: faceOverride,
+    );
+
+    final since = _reactedAt == null ? null : t - _reactedAt!;
+    if (since != null && since >= 0 && since < 1.2) {
+      pose = _react(pose, widget.expression, since);
+    }
+    return pose;
+  }
+
+  /// A still frame in reduced motion, and the first frame before the ticker.
+  bool get _movingSafe => mounted ? _moving : false;
+
+  /// What each expression looks like, before the idle motion is layered on.
+  MascotPose _expressionPose(MascotExpression e, double t, double breath) {
+    return switch (e) {
+      MascotExpression.idle => const MascotPose(),
+      MascotExpression.happy =>
+        MascotPose(face: MascotFace.happy, lift: -1.5 * breath),
+      MascotExpression.listening =>
+        const MascotPose(headTilt: -0.07, look: Offset(-1.5, 0)),
+      MascotExpression.thinking => MascotPose(
+          face: MascotFace.thinking,
+          headTilt: 0.05,
+          rightArm: 0.9,
+          thought: (t * 0.6) % 1.0 + 0.001,
+        ),
+      MascotExpression.encouraging => MascotPose(
+          face: MascotFace.wink,
+          rightArm: 2.3 + 0.3 * math.sin(t * 9),
+          headTilt: -0.05,
+        ),
+      MascotExpression.celebrating => MascotPose(
+          face: MascotFace.joy,
+          leftArm: 2.2 + 0.25 * math.sin(t * 9),
+          rightArm: 2.2 - 0.25 * math.sin(t * 9),
+          lift: -9 * math.sin(t * 5).abs(),
+          sparkle: (t * 0.8) % 1.0 + 0.001,
+        ),
+      MascotExpression.concerned =>
+        const MascotPose(face: MascotFace.sad, headTilt: 0.05),
+      MascotExpression.sad => const MascotPose(
+          face: MascotFace.sad,
+          headTilt: 0.07,
+          squash: 0.1,
+          leftArm: -0.1,
+          rightArm: -0.1,
+        ),
+      MascotExpression.smirk =>
+        const MascotPose(face: MascotFace.smirk, headTilt: -0.08),
+    };
+  }
+
+  /// The beat right after the expression changes: a hop for good news, a
+  /// slump for hard news, a shrug for middling.
+  MascotPose _react(MascotPose p, MascotExpression e, double s) {
+    switch (e) {
+      case MascotExpression.happy:
+      case MascotExpression.celebrating:
+        final hop = s < 0.5 ? -15 * math.sin(math.pi * s / 0.5) : 0.0;
+        final land = s >= 0.5 && s < 0.7 ? 0.3 * math.sin(math.pi * (s - 0.5) / 0.2) : 0.0;
+        final arms = s < 0.9 ? 1.7 * math.sin(math.pi * s / 0.9) : 0.0;
+        return _copy(
+          p,
+          lift: p.lift + hop,
+          squash: p.squash + land,
+          leftArm: p.leftArm + arms,
+          rightArm: p.rightArm + arms,
+          face: MascotFace.joy,
+        );
+      case MascotExpression.sad:
+      case MascotExpression.concerned:
+        final sink = s < 0.4 ? _ease(s / 0.4) : 1 - 0.4 * _ease((s - 0.4) / 0.8);
+        return _copy(
+          p,
+          squash: p.squash + 0.12 * sink,
+          headTilt: p.headTilt + 0.05 * sink,
+          lift: p.lift + 2 * sink,
+        );
+      case MascotExpression.smirk:
+        final shrug = s < 0.7 ? math.sin(math.pi * s / 0.7) : 0.0;
+        return _copy(
+          p,
+          leftArm: p.leftArm + 0.45 * shrug,
+          rightArm: p.rightArm + 0.45 * shrug,
+          headTilt: p.headTilt - 0.06 * shrug,
+          lift: p.lift - 3 * shrug,
+        );
+      default:
+        final bob = s < 0.4 ? -4 * math.sin(math.pi * s / 0.4) : 0.0;
+        return _copy(p, lift: p.lift + bob);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final height = widget.size * _aspect;
+    final height = widget.size * WithMeAvatar.aspect;
+    Widget art;
 
-    Widget art = Image.asset(
-      _asset,
-      width: widget.size,
-      height: height,
-      fit: BoxFit.contain,
-      filterQuality: FilterQuality.medium,
-    );
-
-    if (widget.animate) {
-      art = AnimatedBuilder(
-        animation: _breath,
-        builder: (context, child) {
-          // 0 -> 1 -> 0 over the breath period.
-          final t = Curves.easeInOutSine.transform(_breath.value);
-          final gestures = widget.expression.gestures;
-          // A hop for the expressions that call for one; everyone else just
-          // breathes.
-          final lift = gestures ? -6 * math.sin(t * math.pi) : 0.0;
-          final sway = widget.speaking ? 0.012 * (t - 0.5) : 0.0;
-          return Transform.translate(
-            offset: Offset(0, lift),
-            child: Transform.rotate(
-              angle: sway,
-              child: Transform.scale(
-                scaleX: 1 + 0.010 * t,
-                scaleY: 1 + 0.016 * t,
-                alignment: Alignment.bottomCenter,
-                child: child,
-              ),
+    if (widget.behavior == MascotBehavior.roam) {
+      art = LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.hasBoundedWidth
+              ? constraints.maxWidth
+              : widget.size;
+          _stage = width;
+          return CustomPaint(
+            size: Size(width, height),
+            painter: MascotPainter(
+              frame: _frame,
+              roam: true,
+              characterWidth: widget.size,
             ),
           );
         },
-        child: art,
+      );
+    } else {
+      art = CustomPaint(
+        size: Size(widget.size, height),
+        painter: MascotPainter(frame: _frame),
       );
     }
 
-    final sized = SizedBox(width: widget.size, height: height, child: art);
-
-    if (widget.onTap == null) return sized;
+    art = ExcludeSemantics(child: art);
+    if (widget.onTap == null) return art;
     return GestureDetector(
       onTap: widget.onTap,
       behavior: HitTestBehavior.opaque,
-      child: sized,
+      child: art,
     );
   }
 }
 
-/// The circular head-and-shoulders crop used in the header lockup and as a
-/// chat avatar.
+/// The home screen's loop, as a list of beats. Each beat owns a stretch of
+/// time and says where the character stands and how it moves.
+class _Routine {
+  _Routine({required this.stageFraction});
+
+  /// Seconds to walk the full stage.
+  final double stageFraction;
+
+  static const double _centre = 0.5;
+
+  List<_Beat> get _beats => [
+        const _Beat.wave(2.8, at: _centre),
+        _Beat.walk(stageFraction * 0.5, from: _centre, to: 1),
+        const _Beat.rest(1.1, at: 1),
+        const _Beat.fall(3.4, at: 1),
+        const _Beat.rest(0.8, at: 1),
+        _Beat.walk(stageFraction, from: 1, to: 0),
+        const _Beat.rest(0.9, at: 0),
+        const _Beat.wave(2.2, at: 0),
+        _Beat.walk(stageFraction * 0.5, from: 0, to: _centre),
+        const _Beat.rest(1.6, at: _centre),
+      ];
+
+  MascotFrame frameAt(
+    double t,
+    MascotPose Function(double t, {MascotFace? face}) idle,
+  ) {
+    final beats = _beats;
+    final total = beats.fold<double>(0, (sum, b) => sum + b.duration);
+    var local = t % total;
+    for (final beat in beats) {
+      if (local < beat.duration) return beat.frame(local, t, idle);
+      local -= beat.duration;
+    }
+    return beats.last.frame(0, t, idle);
+  }
+}
+
+enum _BeatKind { rest, wave, walk, fall }
+
+class _Beat {
+  const _Beat.rest(this.duration, {required double at})
+      : kind = _BeatKind.rest,
+        from = at,
+        to = at;
+  const _Beat.wave(this.duration, {required double at})
+      : kind = _BeatKind.wave,
+        from = at,
+        to = at;
+  const _Beat.walk(this.duration, {required this.from, required this.to})
+      : kind = _BeatKind.walk;
+  const _Beat.fall(this.duration, {required double at})
+      : kind = _BeatKind.fall,
+        from = at,
+        to = at;
+
+  final _BeatKind kind;
+  final double duration;
+  final double from;
+  final double to;
+
+  MascotFrame frame(
+    double s,
+    double t,
+    MascotPose Function(double t, {MascotFace? face}) idle,
+  ) {
+    switch (kind) {
+      case _BeatKind.rest:
+        return MascotFrame(idle(t), x: from);
+
+      case _BeatKind.wave:
+        // Arm up, a few waves, arm down - with a wink.
+        final up = _envelope(s, duration, 0.35);
+        final base = idle(t, face: up > 0.5 ? MascotFace.wink : null);
+        return MascotFrame(
+          _copy(
+            base,
+            rightArm: base.rightArm + up * (2.2 + 0.35 * math.sin(s * 10)),
+            headTilt: base.headTilt - 0.06 * up,
+            lift: base.lift - 2 * up * math.sin(s * 10).abs(),
+          ),
+          x: from,
+        );
+
+      case _BeatKind.walk:
+        final progress = _ease(s / duration);
+        final phase = s * 2 * math.pi * 1.9;
+        final base = idle(t);
+        return MascotFrame(
+          _copy(
+            base,
+            stepping: true,
+            step: phase,
+            lift: base.lift - 3.5 * math.sin(phase).abs(),
+            tilt: base.tilt + 0.075 * math.sin(phase),
+            leftArm: 0.25 + 0.3 * math.sin(phase),
+            rightArm: 0.25 - 0.3 * math.sin(phase),
+            face: MascotFace.happy,
+          ),
+          x: from + (to - from) * progress,
+        );
+
+      case _BeatKind.fall:
+        return MascotFrame(_fall(s, t, idle), x: from);
+    }
+  }
+
+  /// Trip, plop, sit there seeing stars, spring back up, shake it off.
+  static MascotPose _fall(
+    double s,
+    double t,
+    MascotPose Function(double t, {MascotFace? face}) idle,
+  ) {
+    final base = idle(t);
+    // Stumble: arms flail, surprised.
+    if (s < 0.4) {
+      final k = s / 0.4;
+      return _copy(
+        base,
+        face: MascotFace.surprised,
+        leftArm: 1.8 * k + 0.4 * math.sin(s * 30),
+        rightArm: 1.8 * k - 0.4 * math.sin(s * 30),
+        tilt: -0.12 * k,
+        lift: -4 * math.sin(math.pi * k),
+      );
+    }
+    // Drop onto the behind.
+    if (s < 0.65) {
+      final k = _easeIn((s - 0.4) / 0.25);
+      return _copy(
+        base,
+        face: MascotFace.surprised,
+        sit: k,
+        leftArm: 1.8 - 0.6 * k,
+        rightArm: 1.8 - 0.6 * k,
+        tilt: -0.12 * (1 - k),
+      );
+    }
+    // Bounce on landing.
+    if (s < 0.9) {
+      final k = (s - 0.65) / 0.25;
+      return _copy(
+        base,
+        face: MascotFace.dazed,
+        sit: 1,
+        squash: 0.35 * math.sin(math.pi * k),
+        lift: -3 * math.sin(math.pi * k),
+        leftArm: 1.2 - 0.8 * k,
+        rightArm: 1.2 - 0.8 * k,
+        stars: k,
+        step: t * 3,
+      );
+    }
+    // Sit a moment, dazed.
+    if (s < 2.1) {
+      return _copy(
+        base,
+        face: MascotFace.dazed,
+        sit: 1,
+        leftArm: 0.4,
+        rightArm: 0.4,
+        tilt: 0.05 * math.sin(s * 5),
+        headTilt: 0.08 * math.sin(s * 5),
+        stars: 1,
+        step: t * 3,
+      );
+    }
+    // Spring back up.
+    if (s < 2.6) {
+      final k = _ease((s - 2.1) / 0.5);
+      return _copy(
+        base,
+        face: MascotFace.happy,
+        sit: 1 - k,
+        lift: -10 * math.sin(math.pi * k),
+        leftArm: 0.4 + 1.2 * math.sin(math.pi * k),
+        rightArm: 0.4 + 1.2 * math.sin(math.pi * k),
+        stars: 1 - k,
+        step: t * 3,
+      );
+    }
+    // Shake it off, sheepish grin.
+    final k = (s - 2.6) / (3.4 - 2.6);
+    final damp = 1 - k;
+    return _copy(
+      base,
+      face: MascotFace.joy,
+      tilt: 0.1 * damp * math.sin(s * 22),
+      headTilt: -0.06 * damp,
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Easing helpers
+// -----------------------------------------------------------------------------
+
+double _ease(double x) => Curves.easeInOut.transform(x.clamp(0.0, 1.0));
+double _easeIn(double x) => Curves.easeIn.transform(x.clamp(0.0, 1.0));
+
+/// 0 -> 1 -> 0 over [width] seconds, starting at [start].
+double _pulse(double t, double start, double width) {
+  final x = (t - start) / width;
+  if (x <= 0 || x >= 1) return 0;
+  return math.sin(math.pi * x);
+}
+
+/// Ramps up over [ramp] seconds, holds, ramps down over the last [ramp].
+double _envelope(double s, double duration, double ramp) {
+  if (s < ramp) return _ease(s / ramp);
+  if (s > duration - ramp) return _ease((duration - s) / ramp);
+  return 1;
+}
+
+/// A sine flattened toward -1 / 1, so a glance holds before moving back.
+double _smoothSquare(double x) => (x * 2.2).clamp(-1.0, 1.0).toDouble();
+
+MascotPose _copy(
+  MascotPose p, {
+  MascotFace? face,
+  double? breath,
+  double? blink,
+  double? leftArm,
+  double? rightArm,
+  double? lift,
+  double? tilt,
+  double? headTilt,
+  double? squash,
+  double? sit,
+  double? step,
+  bool? stepping,
+  Offset? look,
+  double? talk,
+  double? stars,
+  double? sparkle,
+  double? thought,
+}) =>
+    MascotPose(
+      face: face ?? p.face,
+      breath: breath ?? p.breath,
+      blink: blink ?? p.blink,
+      leftArm: leftArm ?? p.leftArm,
+      rightArm: rightArm ?? p.rightArm,
+      lift: lift ?? p.lift,
+      tilt: tilt ?? p.tilt,
+      headTilt: headTilt ?? p.headTilt,
+      squash: squash ?? p.squash,
+      sit: sit ?? p.sit,
+      step: step ?? p.step,
+      stepping: stepping ?? p.stepping,
+      look: look ?? p.look,
+      talk: talk ?? p.talk,
+      stars: stars ?? p.stars,
+      sparkle: sparkle ?? p.sparkle,
+      thought: thought ?? p.thought,
+    );
+
+/// The circular head-and-shoulders crop used in the header lockup and on the
+/// menu and profile screens. A still - one blink per screen would be a
+/// ticker per screen for very little.
 class WithMeAvatarBadge extends StatelessWidget {
   const WithMeAvatarBadge({
     super.key,
@@ -160,41 +575,54 @@ class WithMeAvatarBadge extends StatelessWidget {
   final double size;
   final MascotExpression expression;
 
-  /// Unused — the badge is a still crop. Kept so callers need not change.
+  /// Unused - the badge is a still. Kept so callers need not change.
   final bool animate;
 
   @override
   Widget build(BuildContext context) {
-    // Scale so the head fills the circle, then slide it up so the head's
-    // centre lands on the circle's centre.
-    final zoom = 1 / _headWidth;
-    final artW = size * zoom;
-    final artH = artW * _aspect;
-
-    // In an OverflowBox the child's top sits at (size - artH) * (ay + 1) / 2.
-    // Solve that plus _headCentreY * artH == size / 2 for ay.
-    final ay = (size / 2 - _headCentreY * artH) * 2 / (size - artH) - 1;
-
-    return ClipOval(
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: ColoredBox(
-          color: WithMeColors.tealSoft,
-          child: OverflowBox(
-            maxWidth: artW,
-            maxHeight: artH,
-            alignment: Alignment(0, ay.clamp(-1.0, 1.0)),
-            child: Image.asset(
-              _asset,
-              width: artW,
-              height: artH,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.medium,
-            ),
+    final face = switch (expression) {
+      MascotExpression.happy || MascotExpression.celebrating => MascotFace.happy,
+      MascotExpression.sad || MascotExpression.concerned => MascotFace.sad,
+      MascotExpression.smirk => MascotFace.smirk,
+      MascotExpression.encouraging => MascotFace.wink,
+      _ => MascotFace.neutral,
+    };
+    return ExcludeSemantics(
+      child: ClipOval(
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: ColoredBox(
+            color: WithMeColors.tealSoft,
+            child: CustomPaint(painter: _BadgePainter(face)),
           ),
         ),
       ),
     );
   }
+}
+
+class _BadgePainter extends CustomPainter {
+  _BadgePainter(this.face);
+
+  final MascotFace face;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Frame the head: 128 design units wide, centred at (100, 120) once the
+    // painter's headroom is added. Aim a little above centre so the leaf
+    // crown peeks in at the top.
+    final zoom = size.width / 170;
+    canvas.translate(size.width / 2, size.height / 2);
+    canvas.scale(zoom);
+    canvas.translate(-100, -105);
+    MascotPainter.paintPose(
+      canvas,
+      const Size(MascotPainter.designWidth, MascotPainter.designHeight),
+      MascotPose(face: face),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BadgePainter old) => old.face != face;
 }

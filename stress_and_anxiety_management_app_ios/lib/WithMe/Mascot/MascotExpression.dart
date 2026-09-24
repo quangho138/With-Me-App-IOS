@@ -25,6 +25,14 @@ enum MascotExpression {
 
   /// Gentle concern. Used by the safety layer — never playful.
   concerned,
+
+  /// Down with the user - worried brows, a small frown, a slump. The
+  /// reaction to a hard answer in the check-in ("Rough", a 5 on stress).
+  sad,
+
+  /// A lopsided half-smile and one raised brow - the reaction to a middling
+  /// answer ("Okay", a 3), knowing rather than cheerful.
+  smirk,
 }
 
 extension MascotExpressionInfo on MascotExpression {
@@ -37,6 +45,8 @@ extension MascotExpressionInfo on MascotExpression {
         MascotExpression.encouraging => 'Encouraging',
         MascotExpression.celebrating => 'Celebrating',
         MascotExpression.concerned => 'Concerned',
+        MascotExpression.sad => 'With you',
+        MascotExpression.smirk => 'Hmm',
       };
 
   /// Whether this state animates an arm gesture.

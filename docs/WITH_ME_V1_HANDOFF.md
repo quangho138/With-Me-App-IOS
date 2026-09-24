@@ -186,6 +186,50 @@ within the flow, then to the calendar, then home; and back present on Menu,
 Insights and Exercises. The nine screens that matched their mockups before
 still match.
 
+## The mascot moves, and the check-in waits for answers
+
+Second round of product-owner changes.
+
+**Animation.** `MascotPainter` draws a `MascotPose` - arm angles, lean, hop,
+squash, sit, walk phase, face - and `WithMeAvatar` turns time into poses.
+Everywhere it breathes, blinks on an irregular rhythm, glances about and
+fidgets its hands. On Home (`MascotBehavior.roam`) it runs a loop: a wave
+hello with a wink, a walk to the right edge, a stumble that plops it onto
+its behind with dizzy stars, a spring back up and a shake-off, a walk to the
+left, another wave, and back to the middle. The walk range stops short of
+each edge by the reach of a flung-out arm. Reduced motion holds a still
+pose.
+
+**Reactions in the check-in.** Each page's mascot reads that page's answer
+(`_reaction` in `DailyCheckInScreen`): idle and fidgeting until something is
+picked, then **sad** for hard answers (Rough, stress 4-5, a low rating),
+a **smirk** for middling ones (Okay, a 3, choosing body/mind/...), and a
+**happy** hop for good ones. Naming a stressor or a sign gets gentle
+concern. `sad` and `smirk` are new `MascotExpression`s.
+
+**Intention to change** replaces "What is your intention today?". A dial
+(`ReadinessGauge`) the user drags: mint / peach / coral bands, the needle
+pivoting under a fading dial face, read as Not ready yet ... Very ready,
+with a line of reassurance per level. Geometry measured off the screen the
+product owner supplied. The old list (`kIntentions`) is unused.
+
+**One signs page, chosen.** Body / Feelings / Mind / Behavior is now a
+choice - rebuilt as image15 actually draws it, left-aligned 172 pt pills
+with one selected - and only that dimension's page follows. The flow is
+ten pages. The calendar lists the dependent page as "How stress is showing
+up for you"; opening it starts at the choice. The chosen dimension's signs
+are now saved with the stressor; before this, signs were never written at
+all.
+
+**Continue waits.** Every check-in page keeps Continue disabled until it is
+answered; Back always works. A disabled `WithMeButton` is still announced to
+screen readers as a (dimmed) button.
+
+Verified: 33 captures, and two click-throughs of the web build through
+Flutter's semantics tree - 17 checks on the gating, the signs routing and
+the dial, and the earlier 21 on navigation. The nine screens that matched
+their mockups still do.
+
 ## Decisions you should know about
 
 **Fonts are a guess.** The design names none. Quicksand (UI) and Yellowtail
@@ -193,20 +237,14 @@ still match.
 shipped as assets. If the real faces exist, changing `WithMeText.ui` and
 `WithMeText.script` plus the `fonts:` block is the whole job.
 
-**The mascot is cut out of the screenshots.** There is no character art
-anywhere — the concept PDF has the character baked into a beach background.
-`tool/extract_mascot.py` lifts the largest clean instance off the page
-gradient (`image1.png`, 103 × 146 px), closes the mask, mattes it and upscales
-3×. Two consequences:
-
-- It is **one pose**. `MascotExpression` still picks the *motion* — a
-  celebrating hop reads differently from an idle breath — but the face does not
-  change.
-- At the 200 pt hero size the design uses, upscaled 103 px art is soft.
-
-Transparent PNGs at 3× (~660 px tall), one per expression, would fix both and
-change nothing outside `WithMeAvatar`. `MascotPainter` is kept unused as the
-vector fallback.
+**The mascot is drawn, not a picture.** The document ships no character
+art; the first build cut one pose out of `image1.png`, which could neither
+change its face nor move its limbs. At the product owner's request it now
+comes from `MascotPainter` - the same leaf crown, hibiscus, lei and belly
+swirl, drawn in code - so it can animate. It looks flatter than the 3D
+render in the mockups; that trade was chosen deliberately, and it is the same
+character on every screen, header badge included. `assets/mascot/*.png` and
+`tool/extract_mascot.py` are no longer used by the app.
 
 **There is no login form in the document.** `image1` has a "Log In" button;
 `image2` and `image3` are signup and password reset. `WithMeLoginScreen` is

@@ -1,108 +1,271 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../Theme/WithMeTheme.dart';
-import 'MascotExpression.dart';
+
+/// Which face the companion is pulling.
+enum MascotFace {
+  /// Round eyes, soft closed smile. The resting face.
+  neutral,
+
+  /// Open smile, stronger blush.
+  happy,
+
+  /// Happy-arc eyes and an open smile - a win.
+  joy,
+
+  /// Worried brows, heavy lids, a small frown.
+  sad,
+
+  /// One brow up, a lopsided half-smile.
+  smirk,
+
+  /// One eye shut, the other round - goes with a wave.
+  wink,
+
+  /// Wide eyes, brows up, a small "o" - the moment of a fall.
+  surprised,
+
+  /// Swirly eyes and a wobbly mouth - just after landing.
+  dazed,
+
+  /// Eyes up and aside, one brow raised, an off-centre pucker.
+  thinking,
+}
+
+/// Everything that moves, as numbers. The painter draws exactly this, so an
+/// animation is only ever a function from time to a [MascotPose].
+///
+/// Units are the painter's 200 x 280 design space; angles are radians.
+@immutable
+class MascotPose {
+  const MascotPose({
+    this.face = MascotFace.neutral,
+    this.breath = 0,
+    this.blink = 0,
+    this.leftArm = 0,
+    this.rightArm = 0,
+    this.lift = 0,
+    this.tilt = 0,
+    this.headTilt = 0,
+    this.squash = 0,
+    this.sit = 0,
+    this.step = 0,
+    this.stepping = false,
+    this.look = Offset.zero,
+    this.talk = 0,
+    this.stars = 0,
+    this.sparkle = 0,
+    this.thought = 0,
+  });
+
+  final MascotFace face;
+
+  /// 0 -> 1 -> 0 across one breath.
+  final double breath;
+
+  /// 0 eyes open, 1 shut.
+  final double blink;
+
+  /// How far each arm is raised from resting at the side. 0 hangs, about 1.2
+  /// is level with the shoulder, 2.4 is overhead. Mirrored, so positive
+  /// always means up and outward.
+  final double leftArm;
+  final double rightArm;
+
+  /// Vertical offset of the whole body; negative is up (a hop).
+  final double lift;
+
+  /// Whole-body lean, pivoting on the feet.
+  final double tilt;
+
+  /// Head lean, pivoting on the neck.
+  final double headTilt;
+
+  /// Squash on landing or slumping: wider and shorter. 0 is none.
+  final double squash;
+
+  /// 0 standing, 1 sat on the ground with the feet out in front.
+  final double sit;
+
+  /// Walk cycle phase in radians; only read while [stepping].
+  final double step;
+  final bool stepping;
+
+  /// Where the pupils look, a few units either way.
+  final Offset look;
+
+  /// 0 -> 1 mouth movement while speaking.
+  final double talk;
+
+  /// 0 -> 1 fade of the dizzy stars circling the head after a fall.
+  final double stars;
+
+  /// Phase of the celebration sparkles, or 0 for none.
+  final double sparkle;
+
+  /// Phase of the thought dots, or 0 for none.
+  final double thought;
+}
 
 /// Draws the With Me companion.
 ///
-/// Everything is laid out in a fixed 200 x 250 design space and scaled to the
-/// widget's size, so the character stays proportional at any dimension — a
-/// 36 px chat avatar and a 300 px hero use the same code path.
+/// Laid out in a fixed 200 x 280 design space and scaled to the box it is
+/// given, so a 30 pt header badge and a 200 pt hero share one code path.
 ///
-/// Draw order, back to front:
-///   arms -> body -> feet -> belly tattoo -> lei -> head -> leaf crown ->
-///   hibiscus -> face -> overlays (thought dots, sparkles)
+/// Reads its pose from [frame] on every paint, so an animation can drive it
+/// through a [ValueListenable] without rebuilding any widgets. With [roam],
+/// the box is a stage wider than the character, and [MascotFrame.x] slides
+/// it from the left edge (0) to the right (1).
 class MascotPainter extends CustomPainter {
   MascotPainter({
-    required this.expression,
-    required this.breath,
-    required this.blink,
-    required this.gesture,
-    required this.talk,
-  });
+    required this.frame,
+    this.roam = false,
+    this.characterWidth,
+  }) : super(repaint: frame);
 
-  /// Current emotional state.
-  final MascotExpression expression;
+  /// A single fixed pose - a still, or a test.
+  MascotPainter.still(MascotPose pose)
+      : this(frame: ValueNotifier(MascotFrame(pose)));
 
-  /// 0 -> 1 -> 0 across one slow breath cycle.
-  final double breath;
+  final ValueListenable<MascotFrame> frame;
+  final bool roam;
 
-  /// 0 = eyes fully open, 1 = eyes fully closed.
-  final double blink;
+  /// The character's width when [roam]ing; its height is the box's.
+  final double? characterWidth;
 
-  /// 0 -> 1 -> 0 for arm waves and celebration hops.
-  final double gesture;
+  static const double designWidth = 200;
+  static const double designHeight = 280;
 
-  /// 0 -> 1 -> 0 mouth movement while the companion is "speaking".
-  final double talk;
-
-  static const double _dw = 200;
-  /// Tall enough to hold the leaf crown above the head and the contact
-  /// shadow below the feet without clipping either.
-  static const double _dh = 280;
-
-  /// The character sits this far down the design box, leaving headroom
-  /// for the crown.
+  /// The character sits this far down the design box, leaving headroom for
+  /// the crown and for arms raised overhead.
   static const double _dropY = 22;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final scale = math.min(size.width / _dw, size.height / _dh);
+    final current = frame.value;
+    var box = size;
     canvas.save();
-    // Centre the design box inside whatever box we were given.
+    if (roam && characterWidth != null) {
+      // Arms flung out reach past the character's own box, so the walk
+      // stops short of each edge by that much.
+      final inset = characterWidth! * 0.14;
+      final travel = math.max(0.0, size.width - characterWidth! - 2 * inset);
+      canvas.translate(inset + travel * current.x.clamp(0.0, 1.0), 0);
+      box = Size(characterWidth!, size.height);
+    }
+    paintPose(canvas, box, current.pose);
+    canvas.restore();
+  }
+
+  /// Draws [pose] centred in a [box]-sized area at the canvas origin.
+  static void paintPose(Canvas canvas, Size box, MascotPose pose) {
+    final scale = math.min(box.width / designWidth, box.height / designHeight);
+    canvas.save();
     canvas.translate(
-      (size.width - _dw * scale) / 2,
-      (size.height - _dh * scale) / 2,
+      (box.width - designWidth * scale) / 2,
+      (box.height - designHeight * scale) / 2,
     );
     canvas.scale(scale);
     canvas.translate(0, _dropY);
+    _Figure(canvas, pose).draw();
+    canvas.restore();
+  }
 
-    // A celebrating mascot hops; everything else stays planted.
-    final hop = expression == MascotExpression.celebrating
-        ? -10 * math.sin(gesture * math.pi)
-        : 0.0;
+  @override
+  bool shouldRepaint(covariant MascotPainter old) =>
+      old.frame != frame ||
+      old.roam != roam ||
+      old.characterWidth != characterWidth;
+}
 
-    // Breathing: the body swells very slightly and settles. Subtle on purpose.
-    final swell = 1 + 0.018 * breath;
+/// One moment of the companion: a pose, and where it stands on its stage.
+@immutable
+class MascotFrame {
+  const MascotFrame(this.pose, {this.x = 0.5});
+
+  final MascotPose pose;
+
+  /// 0 left edge of the stage, 1 right edge. Only read when roaming.
+  final double x;
+}
+
+/// The actual drawing, for one pose.
+class _Figure {
+  _Figure(this.canvas, this.pose);
+
+  final Canvas canvas;
+  final MascotPose pose;
+
+  /// Where the feet meet the ground - the pivot for leaning and squashing.
+  static const Offset _ground = Offset(100, 230);
+
+  /// The pivot for the head's own lean.
+  static const Offset _neck = Offset(100, 150);
+
+  void draw() {
+    _drawShadow();
 
     canvas.save();
-    canvas.translate(0, hop);
+    // Sitting lowers the body to the ground; lift raises it for a hop.
+    canvas.translate(0, pose.lift + pose.sit * 26);
+    _about(_ground, () {
+      canvas.rotate(pose.tilt);
+      final squash = pose.squash + pose.sit * 0.08;
+      canvas.scale(1 + squash * 0.12, 1 - squash * 0.12);
+    });
 
-    _drawArms(canvas);
+    _drawArms();
 
-    // Breathing is applied about the character's feet so it looks like it is
-    // rising from the ground rather than growing from the middle.
     canvas.save();
-    canvas.translate(100, 230);
-    canvas.scale(1 + 0.012 * breath, swell);
-    canvas.translate(-100, -230);
-
-    _drawFeet(canvas);
-    _drawBody(canvas);
-    _drawTattoo(canvas);
-    _drawHead(canvas);
-    _drawLei(canvas);
+    // Breathing swells the body from the feet, so it rises rather than grows.
+    _about(_ground, () {
+      canvas.scale(1 + 0.012 * pose.breath, 1 + 0.018 * pose.breath);
+    });
+    if (pose.sit < 0.35) _drawFeet();
+    _drawBody();
+    _drawTattoo();
     canvas.restore();
 
-    _drawLeafCrown(canvas);
-    _drawHibiscus(canvas);
-    _drawFace(canvas);
+    canvas.save();
+    _about(_neck, () => canvas.rotate(pose.headTilt));
+    _drawHead();
+    _drawLeafCrown();
+    _drawHibiscus();
+    _drawFace();
+    canvas.restore();
+
+    // The lei sits across the neck, over the head's lower edge.
+    _drawLei();
 
     canvas.restore();
 
-    if (expression == MascotExpression.thinking) _drawThoughtDots(canvas);
-    if (expression == MascotExpression.celebrating) _drawSparkles(canvas);
+    // Sat down, the feet stick out in front of the body, toward the viewer.
+    if (pose.sit >= 0.35) {
+      canvas.save();
+      canvas.translate(0, pose.lift);
+      _drawFeet();
+      canvas.restore();
+    }
 
-    canvas.restore();
+    if (pose.stars > 0) _drawStars();
+    if (pose.thought > 0) _drawThoughtDots();
+    if (pose.sparkle > 0) _drawSparkles();
+  }
+
+  void _about(Offset pivot, VoidCallback transform) {
+    canvas.translate(pivot.dx, pivot.dy);
+    transform();
+    canvas.translate(-pivot.dx, -pivot.dy);
   }
 
   // ---------------------------------------------------------------------------
   // Body
   // ---------------------------------------------------------------------------
 
-  Paint get _skinPaint => Paint()
+  Paint get _skin => Paint()
     ..shader = const RadialGradient(
       center: Alignment(-0.35, -0.45),
       radius: 1.05,
@@ -114,102 +277,86 @@ class MascotPainter extends CustomPainter {
       stops: [0.0, 0.55, 1.0],
     ).createShader(const Rect.fromLTWH(20, 20, 160, 210));
 
-  void _drawBody(Canvas canvas) {
-    // Soft contact shadow on the sand.
+  void _drawShadow() {
+    // Stays on the ground; shrinks as the body leaves it.
+    final up = (-pose.lift).clamp(0.0, 30.0);
+    final w = 104 * (1 - up / 60) + pose.sit * 18;
     canvas.drawOval(
-      const Rect.fromLTWH(48, 222, 104, 20),
+      Rect.fromCenter(center: const Offset(100, 232), width: w, height: 20),
       Paint()
-        ..color = const Color(0x22000000)
+        ..color = Color.fromRGBO(0, 0, 0, 0.13 * (1 - up / 45))
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7),
     );
+  }
 
+  void _drawBody() {
     canvas.drawOval(
-      Rect.fromCenter(
-        center: const Offset(100, 175),
-        width: 112,
-        height: 104,
-      ),
-      _skinPaint,
+      Rect.fromCenter(center: const Offset(100, 175), width: 112, height: 104),
+      _skin,
     );
   }
 
-  void _drawFeet(Canvas canvas) {
+  void _drawFeet() {
     final paint = Paint()..color = WithMeColors.bodyDeep;
-    canvas.drawOval(
-      Rect.fromCenter(center: const Offset(76, 224), width: 38, height: 24),
-      paint,
-    );
-    canvas.drawOval(
-      Rect.fromCenter(center: const Offset(124, 224), width: 38, height: 24),
-      paint,
-    );
-  }
-
-  void _drawArms(Canvas canvas) {
-    // Deliberately a shade darker than the body's edge, otherwise the
-    // arms disappear into the gradient and the character reads as a blob.
-    final paint = Paint()..color = WithMeColors.bodyShade;
-
-    // Left arm rests against the body.
-    canvas.save();
-    canvas.translate(38, 172);
-    canvas.rotate(0.18);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset.zero, width: 30, height: 62),
-      paint,
-    );
-    canvas.restore();
-
-    // Right arm lifts and waves for the gesturing expressions.
-    final double lift = switch (expression) {
-      MascotExpression.encouraging => 1.0,
-      MascotExpression.celebrating => 1.0,
-      _ => 0.0,
-    };
-    // -0.2 rad resting, swinging up to roughly -1.5 rad when raised.
-    final wave = expression.gestures ? math.sin(gesture * math.pi * 2) * 0.28 : 0.0;
-    final angle = -0.2 - lift * 1.25 + wave;
-
-    canvas.save();
-    canvas.translate(162, 172);
-    canvas.rotate(angle);
-    canvas.drawOval(
-      Rect.fromCenter(center: const Offset(0, -18), width: 30, height: 62),
-      paint,
-    );
-    // A little mitten hand at the end of the raised arm.
-    if (lift > 0) {
-      canvas.drawCircle(const Offset(0, -50), 15, paint);
-    }
-    canvas.restore();
-
-    // Celebrating throws the left arm up too.
-    if (expression == MascotExpression.celebrating) {
+    final sit = pose.sit;
+    for (final side in const [-1.0, 1.0]) {
+      // Walking lifts one foot while the other carries the weight.
+      final phase = pose.stepping ? math.sin(pose.step) * side : 0.0;
+      final raise = pose.stepping ? math.max(0.0, phase) * 7 : 0.0;
       canvas.save();
-      canvas.translate(38, 172);
-      canvas.rotate(0.2 + 1.25 - wave);
+      canvas.translate(100 + side * (24 + sit * 12), 224 - raise - sit * 2);
+      // Sat down, the soles turn out toward the viewer.
+      canvas.rotate(side * sit * 0.55);
       canvas.drawOval(
-        Rect.fromCenter(center: const Offset(0, -18), width: 30, height: 62),
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: 38 + sit * 4,
+          height: 24 + sit * 6,
+        ),
         paint,
       );
-      canvas.drawCircle(const Offset(0, -50), 15, paint);
       canvas.restore();
     }
   }
 
-  void _drawHead(Canvas canvas) {
+  void _drawArms() {
+    // A shade darker than the body's edge, or the arms melt into it.
+    final paint = Paint()..color = WithMeColors.bodyShade;
+    _arm(paint, shoulder: const Offset(42, 148), raise: pose.leftArm, side: -1);
+    _arm(paint, shoulder: const Offset(158, 148), raise: pose.rightArm, side: 1);
+  }
+
+  void _arm(
+    Paint paint, {
+    required Offset shoulder,
+    required double raise,
+    required double side,
+  }) {
+    canvas.save();
+    canvas.translate(shoulder.dx, shoulder.dy);
+    // Resting, each arm hangs a little away from the body; raising swings it
+    // up and out on its own side.
+    canvas.rotate(-side * (0.2 + raise));
     canvas.drawOval(
-      Rect.fromCenter(
-        center: const Offset(100, 98),
-        width: 128,
-        height: 120,
-      ),
-      _skinPaint,
+      Rect.fromCenter(center: const Offset(0, 24), width: 30, height: 62),
+      paint,
+    );
+    // A mitten hand shows once the arm is clear of the body.
+    if (raise > 0.8) {
+      canvas.drawCircle(const Offset(0, 50), 14, paint);
+    }
+    canvas.restore();
+  }
+
+  void _drawHead() {
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(100, 98), width: 128, height: 120),
+      _skin,
     );
   }
 
   /// The koru spiral on the belly, echoing the Polynesian wave motif.
-  void _drawTattoo(Canvas canvas) {
+  void _drawTattoo() {
     final paint = Paint()
       ..color = WithMeColors.tattoo.withValues(alpha: 0.42)
       ..style = PaintingStyle.stroke
@@ -219,21 +366,15 @@ class MascotPainter extends CustomPainter {
     final path = Path();
     const cx = 100.0;
     const cy = 192.0;
-    // An outward spiral: radius grows as the angle sweeps.
     for (var i = 0; i <= 46; i++) {
       final t = i / 46;
       final a = t * math.pi * 2.6 + 2.2;
       final r = 4 + t * 26;
       final p = Offset(cx + math.cos(a) * r, cy + math.sin(a) * r * 0.82);
-      if (i == 0) {
-        path.moveTo(p.dx, p.dy);
-      } else {
-        path.lineTo(p.dx, p.dy);
-      }
+      i == 0 ? path.moveTo(p.dx, p.dy) : path.lineTo(p.dx, p.dy);
     }
     canvas.drawPath(path, paint);
 
-    // A second, smaller wave curl to the side.
     final curl = Path()
       ..moveTo(58, 186)
       ..quadraticBezierTo(66, 172, 78, 180)
@@ -245,18 +386,17 @@ class MascotPainter extends CustomPainter {
   // Botanicals
   // ---------------------------------------------------------------------------
 
-  void _drawLeafCrown(Canvas canvas) {
-    // Three leaves fanning from the crown, the middle one tallest.
-    _leaf(canvas, const Offset(100, 42), -0.12, 1.0);
-    _leaf(canvas, const Offset(100, 46), -0.95, 0.82);
-    _leaf(canvas, const Offset(100, 46), 0.75, 0.86);
+  void _drawLeafCrown() {
+    _leaf(const Offset(100, 42), -0.12, 1.0);
+    _leaf(const Offset(100, 46), -0.95, 0.82);
+    _leaf(const Offset(100, 46), 0.75, 0.86);
   }
 
-  void _leaf(Canvas canvas, Offset base, double angle, double scale) {
+  void _leaf(Offset base, double angle, double scale) {
     canvas.save();
     canvas.translate(base.dx, base.dy);
-    // The crown sways very slightly with the breath.
-    canvas.rotate(angle + breath * 0.05);
+    // The crown sways with the breath and trails a hop a little.
+    canvas.rotate(angle + pose.breath * 0.05 - pose.lift * 0.004);
     canvas.scale(scale);
 
     final path = Path()
@@ -264,7 +404,6 @@ class MascotPainter extends CustomPainter {
       ..quadraticBezierTo(-26, -30, 0, -58)
       ..quadraticBezierTo(26, -30, 0, 0)
       ..close();
-
     canvas.drawPath(
       path,
       Paint()
@@ -274,8 +413,6 @@ class MascotPainter extends CustomPainter {
           colors: [WithMeColors.leafDeep, WithMeColors.leaf],
         ).createShader(const Rect.fromLTWH(-26, -58, 52, 58)),
     );
-
-    // Midrib.
     canvas.drawLine(
       const Offset(0, -3),
       const Offset(0, -52),
@@ -287,17 +424,13 @@ class MascotPainter extends CustomPainter {
     canvas.restore();
   }
 
-  void _drawHibiscus(Canvas canvas) {
+  void _drawHibiscus() {
     const center = Offset(44, 74);
-    const petalCount = 5;
-
     canvas.save();
     canvas.translate(center.dx, center.dy);
-
-    for (var i = 0; i < petalCount; i++) {
-      final a = (i / petalCount) * math.pi * 2 - math.pi / 2;
+    for (var i = 0; i < 5; i++) {
       canvas.save();
-      canvas.rotate(a);
+      canvas.rotate((i / 5) * math.pi * 2 - math.pi / 2);
       canvas.drawOval(
         Rect.fromCenter(center: const Offset(0, -13), width: 19, height: 24),
         Paint()
@@ -309,8 +442,6 @@ class MascotPainter extends CustomPainter {
       );
       canvas.restore();
     }
-
-    // Stamen: a short stalk with a pollen tip.
     canvas.drawLine(
       Offset.zero,
       const Offset(9, -11),
@@ -332,19 +463,18 @@ class MascotPainter extends CustomPainter {
     canvas.restore();
   }
 
-  /// Plumeria lei sitting across the shoulders.
-  void _drawLei(Canvas canvas) {
+  /// Plumeria lei across the shoulders.
+  void _drawLei() {
     const count = 7;
     for (var i = 0; i < count; i++) {
       final t = i / (count - 1);
-      // Flowers follow a shallow arc dipping in the middle.
       final x = 46 + t * 108;
       final y = 143 + math.sin(t * math.pi) * 16;
-      _plumeria(canvas, Offset(x, y), 9.5 - (t - 0.5).abs() * 3);
+      _plumeria(Offset(x, y), 9.5 - (t - 0.5).abs() * 3);
     }
   }
 
-  void _plumeria(Canvas canvas, Offset center, double radius) {
+  void _plumeria(Offset center, double radius) {
     canvas.save();
     canvas.translate(center.dx, center.dy);
     for (var i = 0; i < 5; i++) {
@@ -372,32 +502,32 @@ class MascotPainter extends CustomPainter {
   // Face
   // ---------------------------------------------------------------------------
 
-  void _drawFace(Canvas canvas) {
-    // Listening leans the head toward the user.
-    final tilt = expression == MascotExpression.listening ? -0.06 : 0.0;
+  static const Offset _leftEye = Offset(74, 100);
+  static const Offset _rightEye = Offset(126, 100);
 
-    canvas.save();
-    canvas.translate(100, 98);
-    canvas.rotate(tilt);
-    canvas.translate(-100, -98);
+  Paint get _ink => Paint()
+    ..color = WithMeColors.eye
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 4.2
+    ..strokeCap = StrokeCap.round;
 
-    _drawBlush(canvas);
-    _drawEyes(canvas);
-    _drawBrows(canvas);
-    _drawMouth(canvas);
-
-    canvas.restore();
+  void _drawFace() {
+    _drawBlush();
+    _drawEyes();
+    _drawBrows();
+    _drawMouth();
   }
 
-  void _drawBlush(Canvas canvas) {
-    final strong = expression == MascotExpression.happy ||
-        expression == MascotExpression.celebrating ||
-        expression == MascotExpression.encouraging;
-
+  void _drawBlush() {
+    final strong = pose.face == MascotFace.happy ||
+        pose.face == MascotFace.joy ||
+        pose.face == MascotFace.wink ||
+        pose.face == MascotFace.dazed;
     final paint = Paint()
-      ..color = WithMeColors.blush.withValues(alpha: strong ? 0.55 : 0.34)
+      ..color = WithMeColors.blush.withValues(
+        alpha: strong ? 0.55 : (pose.face == MascotFace.sad ? 0.22 : 0.34),
+      )
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-
     canvas.drawOval(
       Rect.fromCenter(center: const Offset(52, 116), width: 26, height: 15),
       paint,
@@ -408,166 +538,188 @@ class MascotPainter extends CustomPainter {
     );
   }
 
-  void _drawEyes(Canvas canvas) {
-    // Thinking glances up and to the side.
-    final look = expression == MascotExpression.thinking
-        ? const Offset(3.5, -3)
-        : Offset.zero;
-
-    // Celebrating uses happy arcs instead of round eyes.
-    if (expression == MascotExpression.celebrating) {
-      _happyArcEye(canvas, const Offset(74, 100));
-      _happyArcEye(canvas, const Offset(126, 100));
-      return;
+  void _drawEyes() {
+    switch (pose.face) {
+      case MascotFace.joy:
+        _arcEye(_leftEye);
+        _arcEye(_rightEye);
+      case MascotFace.wink:
+        _roundEye(_leftEye, pose.look, pose.blink);
+        _arcEye(_rightEye);
+      case MascotFace.dazed:
+        _swirlEye(_leftEye, 1);
+        _swirlEye(_rightEye, -1);
+      case MascotFace.surprised:
+        _roundEye(_leftEye, pose.look, 0, grow: 1.12);
+        _roundEye(_rightEye, pose.look, 0, grow: 1.12);
+      case MascotFace.sad:
+        // Heavy lids and a downward glance.
+        final lid = math.max(pose.blink, 0.28);
+        _roundEye(_leftEye, pose.look + const Offset(0, 2.5), lid);
+        _roundEye(_rightEye, pose.look + const Offset(0, 2.5), lid);
+      case MascotFace.smirk:
+        // Knowing: both lids a touch lower, eyes cut to the side.
+        final lid = math.max(pose.blink, 0.18);
+        _roundEye(_leftEye, pose.look + const Offset(3, 0), lid);
+        _roundEye(_rightEye, pose.look + const Offset(3, 0), lid);
+      case MascotFace.thinking:
+        _roundEye(_leftEye, pose.look + const Offset(3.5, -3), pose.blink);
+        _roundEye(_rightEye, pose.look + const Offset(3.5, -3), pose.blink);
+      case MascotFace.neutral:
+      case MascotFace.happy:
+        _roundEye(_leftEye, pose.look, pose.blink);
+        _roundEye(_rightEye, pose.look, pose.blink);
     }
-
-    // Encouraging winks with the eye on the same side as the raised arm.
-    if (expression == MascotExpression.encouraging) {
-      _roundEye(canvas, const Offset(74, 100), look, blink);
-      _happyArcEye(canvas, const Offset(126, 100));
-      return;
-    }
-
-    _roundEye(canvas, const Offset(74, 100), look, blink);
-    _roundEye(canvas, const Offset(126, 100), look, blink);
   }
 
-  void _roundEye(Canvas canvas, Offset center, Offset look, double lid) {
-    const rx = 14.5;
-    const ry = 17.5;
-    // Blinking squashes the eye vertically rather than hiding it.
+  void _roundEye(Offset center, Offset look, double lid, {double grow = 1}) {
+    final rx = 14.5 * grow;
+    final ry = 17.5 * grow;
+    // Lids squash the eye vertically rather than hiding it.
     final double open = (1 - lid).clamp(0.06, 1.0).toDouble();
+    // Lowered lids close from the top: keep the eye's bottom edge where it is.
+    final c = center + Offset(0, ry * (1 - open));
 
     canvas.drawOval(
-      Rect.fromCenter(
-        center: center,
-        width: rx * 2,
-        height: ry * 2 * open,
-      ),
+      Rect.fromCenter(center: c, width: rx * 2, height: ry * 2 * open),
       Paint()..color = WithMeColors.eye,
     );
-
-    // Once the lid is most of the way down there is nothing left to detail.
     if (open < 0.35) return;
-
-    // Iris crescent gives the eye some depth.
     canvas.drawOval(
       Rect.fromCenter(
-        center: center + look * 0.5 + const Offset(0, 3),
+        center: c + look * 0.5 + const Offset(0, 3),
         width: rx * 1.5,
         height: ry * 1.5 * open,
       ),
       Paint()..color = WithMeColors.eyeIris.withValues(alpha: 0.55),
     );
-
-    // Two highlights: a large one up-left, a small one down-right.
     canvas.drawCircle(
-      center + look + const Offset(-4.5, -6),
+      c + look + const Offset(-4.5, -6),
       4.6 * open,
       Paint()..color = Colors.white,
     );
     canvas.drawCircle(
-      center + look + const Offset(5, 6),
+      c + look + const Offset(5, 6),
       2.2 * open,
       Paint()..color = Colors.white.withValues(alpha: 0.85),
     );
   }
 
-  void _happyArcEye(Canvas canvas, Offset center) {
-    final path = Path()
-      ..moveTo(center.dx - 14, center.dy + 4)
-      ..quadraticBezierTo(center.dx, center.dy - 14, center.dx + 14, center.dy + 4);
+  void _arcEye(Offset center) {
     canvas.drawPath(
-      path,
-      Paint()
-        ..color = WithMeColors.eye
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5.5
-        ..strokeCap = StrokeCap.round,
+      Path()
+        ..moveTo(center.dx - 14, center.dy + 4)
+        ..quadraticBezierTo(
+            center.dx, center.dy - 14, center.dx + 14, center.dy + 4),
+      _ink..strokeWidth = 5.5,
     );
   }
 
-  void _drawBrows(Canvas canvas) {
-    // Only the states that need them get brows; the resting face is bare,
-    // which is what keeps it looking soft.
-    if (expression != MascotExpression.concerned &&
-        expression != MascotExpression.thinking) {
-      return;
+  void _swirlEye(Offset center, double turn) {
+    final path = Path();
+    for (var i = 0; i <= 30; i++) {
+      final t = i / 30;
+      final a = turn * t * math.pi * 3.2;
+      final r = 2 + t * 11;
+      final p = center + Offset(math.cos(a) * r, math.sin(a) * r);
+      i == 0 ? path.moveTo(p.dx, p.dy) : path.lineTo(p.dx, p.dy);
     }
+    canvas.drawPath(path, _ink..strokeWidth = 3.4);
+  }
 
+  void _drawBrows() {
     final paint = Paint()
       ..color = WithMeColors.bodyShade
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round;
 
-    if (expression == MascotExpression.concerned) {
-      // Inner ends lift — the universal "worried" shape.
-      canvas.drawLine(const Offset(60, 74), const Offset(86, 68), paint);
-      canvas.drawLine(const Offset(140, 74), const Offset(114, 68), paint);
-    } else {
-      // Thinking: one brow raised.
-      canvas.drawLine(const Offset(60, 72), const Offset(86, 74), paint);
-      canvas.drawLine(const Offset(140, 66), const Offset(114, 70), paint);
+    switch (pose.face) {
+      case MascotFace.sad:
+        // Inner ends up: the universal worried shape.
+        canvas.drawLine(const Offset(64, 75), const Offset(86, 68), paint);
+        canvas.drawLine(const Offset(142, 76), const Offset(114, 68), paint);
+      case MascotFace.smirk:
+        // One brow cocked, the other flat.
+        canvas.drawLine(const Offset(66, 73), const Offset(86, 73), paint);
+        canvas.drawLine(const Offset(114, 66), const Offset(140, 61), paint);
+      case MascotFace.thinking:
+        canvas.drawLine(const Offset(66, 72), const Offset(86, 74), paint);
+        canvas.drawLine(const Offset(140, 66), const Offset(114, 70), paint);
+      case MascotFace.surprised:
+        canvas.drawLine(const Offset(66, 63), const Offset(86, 60), paint);
+        canvas.drawLine(const Offset(140, 64), const Offset(114, 60), paint);
+      default:
+        // The resting face is bare; that is what keeps it soft.
+        break;
     }
   }
 
-  void _drawMouth(Canvas canvas) {
-    final paint = Paint()
-      ..color = WithMeColors.eye
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.2
-      ..strokeCap = StrokeCap.round;
-
+  void _drawMouth() {
     const cx = 100.0;
     const cy = 128.0;
+    final ink = _ink;
 
-    switch (expression) {
-      case MascotExpression.celebrating:
-      case MascotExpression.happy:
-        // Open, filled smile.
-        final open = 11.0 + talk * 5;
-        final path = Path()
-          ..moveTo(cx - 16, cy - 2)
-          ..quadraticBezierTo(cx, cy + open + 6, cx + 16, cy - 2)
-          ..quadraticBezierTo(cx, cy + 2, cx - 16, cy - 2)
-          ..close();
-        canvas.drawPath(path, Paint()..color = WithMeColors.eye);
-        break;
-
-      case MascotExpression.concerned:
-        // A small, level, slightly downturned line — never a cartoon frown.
+    switch (pose.face) {
+      case MascotFace.happy:
+      case MascotFace.joy:
+        final open = 11.0 + pose.talk * 5;
         canvas.drawPath(
           Path()
-            ..moveTo(cx - 11, cy + 4)
-            ..quadraticBezierTo(cx, cy - 2, cx + 11, cy + 4),
-          paint,
+            ..moveTo(cx - 16, cy - 2)
+            ..quadraticBezierTo(cx, cy + open + 6, cx + 16, cy - 2)
+            ..quadraticBezierTo(cx, cy + 2, cx - 16, cy - 2)
+            ..close(),
+          Paint()..color = WithMeColors.eye,
         );
-        break;
-
-      case MascotExpression.thinking:
-        // Off-centre pucker.
+      case MascotFace.sad:
+        canvas.drawPath(
+          Path()
+            ..moveTo(cx - 13, cy + 7)
+            ..quadraticBezierTo(cx, cy - 4, cx + 13, cy + 7),
+          ink,
+        );
+      case MascotFace.smirk:
+        // Flat on the left, curling up on the right.
+        canvas.drawPath(
+          Path()
+            ..moveTo(cx - 12, cy + 2)
+            ..quadraticBezierTo(cx + 2, cy + 6, cx + 15, cy - 5),
+          ink,
+        );
+      case MascotFace.surprised:
+        canvas.drawOval(
+          Rect.fromCenter(center: const Offset(cx, cy + 3), width: 11, height: 13),
+          ink..strokeWidth = 3.6,
+        );
+      case MascotFace.dazed:
+        final path = Path()..moveTo(cx - 12, cy + 2);
+        for (var i = 1; i <= 4; i++) {
+          path.quadraticBezierTo(
+            cx - 12 + (i - 0.5) * 6,
+            cy + 2 + (i.isOdd ? 4 : -4),
+            cx - 12 + i * 6,
+            cy + 2,
+          );
+        }
+        canvas.drawPath(path, ink..strokeWidth = 3.4);
+      case MascotFace.thinking:
         canvas.drawPath(
           Path()
             ..moveTo(cx - 6, cy + 2)
             ..quadraticBezierTo(cx + 3, cy + 7, cx + 12, cy),
-          paint,
+          ink,
         );
-        break;
-
-      case MascotExpression.idle:
-      case MascotExpression.listening:
-      case MascotExpression.encouraging:
-        // Gentle closed smile; widens a little while speaking.
-        final w = 13.0 + talk * 3;
-        final d = 9.0 + talk * 4;
+      case MascotFace.neutral:
+      case MascotFace.wink:
+        final w = 13.0 + pose.talk * 3;
+        final d = 9.0 + pose.talk * 4;
         canvas.drawPath(
           Path()
             ..moveTo(cx - w, cy - 2)
             ..quadraticBezierTo(cx, cy + d, cx + w, cy - 2),
-          paint,
+          ink,
         );
-        break;
     }
   }
 
@@ -575,12 +727,29 @@ class MascotPainter extends CustomPainter {
   // Overlays
   // ---------------------------------------------------------------------------
 
-  void _drawThoughtDots(Canvas canvas) {
+  /// Three little stars orbiting the head after a fall.
+  void _drawStars() {
+    final paint = Paint()
+      ..color = WithMeColors.lei.withValues(alpha: pose.stars.clamp(0.0, 1.0))
+      ..style = PaintingStyle.fill;
     for (var i = 0; i < 3; i++) {
-      // Each dot fades in turn, so the cluster reads as "still working".
-      final phase = (gesture + i * 0.22) % 1.0;
-      final double opacity =
-          math.sin(phase * math.pi).clamp(0.0, 1.0).toDouble();
+      final a = pose.step * 1.0 + i * math.pi * 2 / 3;
+      final c = Offset(100 + math.cos(a) * 58, 36 + pose.sit * 26 + math.sin(a) * 12);
+      final path = Path();
+      for (var k = 0; k < 10; k++) {
+        final r = k.isEven ? 7.0 : 3.0;
+        final t = k * math.pi / 5 - math.pi / 2;
+        final p = c + Offset(math.cos(t) * r, math.sin(t) * r);
+        k == 0 ? path.moveTo(p.dx, p.dy) : path.lineTo(p.dx, p.dy);
+      }
+      canvas.drawPath(path..close(), paint);
+    }
+  }
+
+  void _drawThoughtDots() {
+    for (var i = 0; i < 3; i++) {
+      final phase = (pose.thought + i * 0.22) % 1.0;
+      final double opacity = math.sin(phase * math.pi).clamp(0.0, 1.0);
       canvas.drawCircle(
         Offset(150 + i * 13.0, 44 - i * 11.0),
         3.2 + i * 1.3,
@@ -589,32 +758,21 @@ class MascotPainter extends CustomPainter {
     }
   }
 
-  void _drawSparkles(Canvas canvas) {
+  void _drawSparkles() {
     const points = [Offset(38, 56), Offset(168, 74), Offset(150, 30)];
     for (var i = 0; i < points.length; i++) {
-      final phase = (gesture + i * 0.3) % 1.0;
-      final double scale =
-          math.sin(phase * math.pi).clamp(0.0, 1.0).toDouble();
-      if (scale <= 0.02) continue;
-
+      final phase = (pose.sparkle + i * 0.3) % 1.0;
+      final double s = math.sin(phase * math.pi).clamp(0.0, 1.0);
+      if (s <= 0.02) continue;
       final p = points[i];
-      final r = 7.0 * scale;
+      final r = 7.0 * s;
       final paint = Paint()
-        ..color = WithMeColors.lei.withValues(alpha: scale)
+        ..color = WithMeColors.lei.withValues(alpha: s)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.4
         ..strokeCap = StrokeCap.round;
-
       canvas.drawLine(Offset(p.dx - r, p.dy), Offset(p.dx + r, p.dy), paint);
       canvas.drawLine(Offset(p.dx, p.dy - r), Offset(p.dx, p.dy + r), paint);
     }
   }
-
-  @override
-  bool shouldRepaint(covariant MascotPainter old) =>
-      old.expression != expression ||
-      old.breath != breath ||
-      old.blink != blink ||
-      old.gesture != gesture ||
-      old.talk != talk;
 }
