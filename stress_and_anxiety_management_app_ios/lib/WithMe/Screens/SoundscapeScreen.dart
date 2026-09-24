@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../Components/WithMeControls.dart';
+import '../Components/WithMeScaffold.dart';
 import '../Theme/WithMeTheme.dart';
 import 'BeforeWeStartScreen.dart';
 
@@ -84,7 +85,17 @@ class _SoundscapeScreenState extends State<SoundscapeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: WithMeSpace.xxl),
+                // Its own full-bleed scene rather than WithMeScaffold, so the
+                // way back is added here; "Done" at the bottom also pops.
+                const SizedBox(height: WithMeSpace.md),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: WithMeBackChevron(
+                    color: Colors.white,
+                    onTap: () => Navigator.of(context).maybePop(),
+                  ),
+                ),
+                const SizedBox(height: WithMeSpace.sm),
                 Text(
                   widget.name,
                   textAlign: TextAlign.center,

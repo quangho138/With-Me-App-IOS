@@ -37,7 +37,10 @@ class WithMeScaffold extends StatelessWidget {
   /// Centred screen title — "Monthly Calendar", "Your Insights", "Settings".
   final String? title;
 
-  /// Adds the back chevron the design places to the left of the title.
+  /// What the back chevron does. Left null, the chevron still appears
+  /// whenever there is a page to return to and simply pops - every screen
+  /// gets a way back without having to ask for one. Pass this only when back
+  /// means something else, like stepping through the check-in.
   final VoidCallback? onBack;
 
   final Widget? child;
@@ -56,13 +59,34 @@ class WithMeScaffold extends StatelessWidget {
 
   final bool dimmed;
 
+  /// The explicit handler, or a plain pop when the navigator has somewhere
+  /// to go. Null on a root screen - welcome, or home after signing in -
+  /// where there is no previous page and a chevron would lead nowhere.
+  VoidCallback? _backAction(BuildContext context) {
+    if (onBack != null) return onBack;
+    final navigator = Navigator.of(context);
+    return navigator.canPop() ? () => navigator.maybePop() : null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final back = _backAction(context);
+
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (lockup) const _Lockup(),
-        if (title != null) _Title(title!, onBack: onBack),
+        // The chevron sits beside the title when there is one; otherwise
+        // beside the lockup; otherwise on a row of its own, top left.
+        if (lockup) _Lockup(onBack: title == null ? back : null),
+        if (title != null) _Title(title!, onBack: back),
+        if (!lockup && title == null && back != null)
+          Padding(
+            padding: const EdgeInsets.only(top: WithMeSpace.md),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: WithMeBackChevron(onTap: back),
+            ),
+          ),
         // Expanded either way, so the action stays pinned to the bottom: a
         // Spacer beside a Flexible scroll view would split the free space
         // between them and cut the content in half.
@@ -122,20 +146,27 @@ class WithMeScaffold extends StatelessWidget {
 
 /// Mascot badge plus the script wordmark, top left of nearly every screen.
 class _Lockup extends StatelessWidget {
-  const _Lockup();
+  const _Lockup({this.onBack});
+
+  /// Set on screens with no title row, so the way back still has a place.
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: WithMeSpace.md, bottom: WithMeSpace.sm),
+      padding: const EdgeInsets.only(
+        top: WithMeSpace.md,
+        bottom: WithMeSpace.sm,
+      ),
       child: Row(
         children: [
+          if (onBack != null) ...[
+            WithMeBackChevron(onTap: onBack!),
+            const SizedBox(width: WithMeSpace.sm),
+          ],
           const WithMeAvatarBadge(size: 30),
           const SizedBox(width: WithMeSpace.sm),
-          Text(
-            'With Me',
-            style: WithMeText.wordmark.copyWith(fontSize: 22),
-          ),
+          Text('With Me', style: WithMeText.wordmark.copyWith(fontSize: 22)),
         ],
       ),
     );
@@ -157,12 +188,15 @@ class _Title extends StatelessWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.only(top: WithMeSpace.sm, bottom: WithMeSpace.lg),
+      padding: const EdgeInsets.only(
+        top: WithMeSpace.sm,
+        bottom: WithMeSpace.lg,
+      ),
       child: onBack == null
           ? Center(child: label)
           : Row(
               children: [
-                _BackChevron(onTap: onBack!),
+                WithMeBackChevron(onTap: onBack!),
                 const SizedBox(width: WithMeSpace.sm),
                 Expanded(child: label),
                 // Balance the chevron so the title stays optically centred.
@@ -173,23 +207,32 @@ class _Title extends StatelessWidget {
   }
 }
 
-class _BackChevron extends StatelessWidget {
-  const _BackChevron({required this.onTap});
+class WithMeBackChevron extends StatelessWidget {
+  const WithMeBackChevron({super.key, required this.onTap, this.color});
 
   final VoidCallback onTap;
 
+  /// Teal by default; the soundscape draws it white on its dark scene.
+  final Color? color;
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: const SizedBox(
-        width: 24,
-        height: 24,
-        child: Icon(
-          Icons.chevron_left_rounded,
-          size: 24,
-          color: WithMeColors.teal,
+    // Labelled, so a screen reader announces "Back" rather than an unnamed
+    // button.
+    return Semantics(
+      button: true,
+      label: 'Back',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: Icon(
+            Icons.chevron_left_rounded,
+            size: 24,
+            color: color ?? WithMeColors.teal,
+          ),
         ),
       ),
     );

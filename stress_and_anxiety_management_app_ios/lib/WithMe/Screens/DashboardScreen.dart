@@ -84,8 +84,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return WithMeScaffold(
       lockup: false,
       title: 'Your Insights',
-      // image32 shows no back chevron, unlike image33 and image34. The route
-      // is pushed, so the system back gesture still returns.
       action: WithMeButton(
         label: 'Share with someone I trust',
         filled: false,

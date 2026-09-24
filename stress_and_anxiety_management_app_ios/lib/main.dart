@@ -9,6 +9,7 @@ import 'WithMe/Screens/BeforeWeStartScreen.dart';
 import 'WithMe/Screens/BreathingScreen.dart';
 import 'WithMe/Screens/CheckInScreen.dart';
 import 'WithMe/Screens/CreateAccountScreen.dart';
+import 'WithMe/Screens/DailyCheckInScreen.dart';
 import 'WithMe/Screens/DashboardScreen.dart';
 import 'WithMe/Screens/ExerciseChooseScreen.dart';
 import 'WithMe/Screens/HelpScreen.dart';
@@ -79,6 +80,7 @@ class WithMeApp extends StatelessWidget {
 
         // The check-in — image7 to image24
         CheckInScreen.route: (_) => const CheckInScreen(),
+        DailyCheckInScreen.route: (_) => const DailyCheckInScreen(),
 
         // Exercises — image25 to image31
         ExerciseChooseScreen.route: (_) => const ExerciseChooseScreen(),

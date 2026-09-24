@@ -15,6 +15,7 @@ import 'package:stress_and_anxiety_management_app_ios/WithMe/Screens/BeforeWeSta
 import 'package:stress_and_anxiety_management_app_ios/WithMe/Screens/BreathingScreen.dart';
 import 'package:stress_and_anxiety_management_app_ios/WithMe/Screens/CheckInScreen.dart';
 import 'package:stress_and_anxiety_management_app_ios/WithMe/Screens/CreateAccountScreen.dart';
+import 'package:stress_and_anxiety_management_app_ios/WithMe/Screens/DailyCheckInScreen.dart';
 import 'package:stress_and_anxiety_management_app_ios/WithMe/Screens/DashboardScreen.dart';
 import 'package:stress_and_anxiety_management_app_ios/WithMe/Screens/DayDetailScreen.dart';
 import 'package:stress_and_anxiety_management_app_ios/WithMe/Screens/ExerciseChooseScreen.dart';
@@ -119,7 +120,8 @@ final Map<String, Widget Function()> _screens = {
   'image4-profile': () => const ProfileScreen(),
   'image5-home': () => const WithMeHomeScreen(),
   'image6-monthly-calendar': () => const MonthlyCalendarScreen(),
-  'image7to24-check-in': () => const CheckInScreen(),
+  'image7to23-daily-check-in': () => const DailyCheckInScreen(),
+  'image24-check-in': () => const CheckInScreen(),
   'image25-exercise-choose': () => const ExerciseChooseScreen(),
   'image26-rest-your-mind': () => const RestYourMindScreen(),
   'image27-breathing-478': () => const BreathingScreen(),
@@ -157,7 +159,7 @@ final Map<String, Widget Function()> _screens = {
 /// opens would put a blank state next to a filled one and call the gap a
 /// difference.
 final Map<String, Future<void> Function(WidgetTester)> _drivers = {
-  'image7to24-check-in': (tester) async {
+  'image7to23-daily-check-in': (tester) async {
     final dots = find.descendant(
       of: find.byType(MoodSelector),
       matching: find.byType(GestureDetector),

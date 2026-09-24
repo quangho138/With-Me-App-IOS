@@ -53,11 +53,16 @@ class QuestionCard extends StatelessWidget {
     required this.question,
     this.subtitle,
     this.minHeight = 100,
+    this.questionSize,
   });
 
   final String question;
   final String? subtitle;
   final double minHeight;
+
+  /// Overrides the 20 pt heading where the design sets it smaller - image24's
+  /// "Take a moment for self-reflection" measures 18 pt, and at 20 it wraps.
+  final double? questionSize;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +80,9 @@ class QuestionCard extends StatelessWidget {
               Text(
                 question,
                 textAlign: TextAlign.center,
-                style: WithMeText.question,
+                style: questionSize == null
+                    ? WithMeText.question
+                    : WithMeText.question.copyWith(fontSize: questionSize),
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: WithMeSpace.sm),

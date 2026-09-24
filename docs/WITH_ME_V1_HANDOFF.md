@@ -142,6 +142,50 @@ a short nub because a seeded "Rough" day scores 1 of 5. The mockup's sample
 data had no low day. Raising the floor would make the chart overstate the
 mood, so the bar stays short.
 
+## Check In, the calendar, and the way back
+
+Three changes on request, after the design pass. Each departs from the
+mockups on purpose.
+
+**The daily check-in moved to the calendar.** Selecting *today* on the monthly
+calendar lists every page of the daily check-in - "Hello Maya, how are you
+feeling today?", the 1-5 stress scale, motivation, and on through the
+strategy detail, thirteen in all. Each row opens straight onto that page, and
+"Start today's check-in" walks them in order. Back from the page a visit
+started on returns to the calendar rather than into pages the user skipped.
+Any other day still opens its detail. The flow is `DailyCheckInScreen`
+(`/daily-check-in`); `pageTitles()` is the list the calendar shows and must
+stay in step with its `_step` switch.
+
+**Check In is the five W's.** The "CHECK IN" action now opens the
+self-reflection on its own: Who, What, Where, When and Why, each a dropdown of
+questions - the original app's Self-Reflection screen, rebuilt in the V1 page
+style (`image24`, plus a title row and a back chevron). One reflection a day:
+reopening shows today's choices and saving replaces them. The questions are
+the ones image24 shows ("Who did I lean on today?" ...), in
+`kReflectionPrompts`. The original app used a different, more general set
+("Who inspires you the most and why?" ...); swapping to those is a change to
+that one map. The page is 4 pt tighter between dropdowns than image24 so all
+five fit above the button with the extra title row.
+
+**Every screen has a way back.** `WithMeScaffold` now shows the chevron
+whenever the navigator can pop, without each screen having to ask - beside the
+title, beside the lockup when there is no title, or alone top-left when there
+is neither. `onBack` still overrides it where back means something else (the
+check-in steps). The soundscape draws its own scene, so it adds the chevron
+itself, in white. Root screens - welcome, and home after signing in - have
+nothing behind them and show none. This puts chevrons on screens the mockups
+drew without one (image6, image32 and others). The chevron is labelled "Back"
+for screen readers.
+
+Verified by driving the web build through Flutter's semantics tree in
+headless Chromium, 21 checks: all five W's chosen, saved, and restored on
+reopening; today's list present only once today is picked, reaching the last
+page; a listed page and "Start" both opening with a chevron; back stepping
+within the flow, then to the calendar, then home; and back present on Menu,
+Insights and Exercises. The nine screens that matched their mockups before
+still match.
+
 ## Decisions you should know about
 
 **Fonts are a guess.** The design names none. Quicksand (UI) and Yellowtail
