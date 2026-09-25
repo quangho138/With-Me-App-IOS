@@ -15,11 +15,13 @@ class BeforeWeStartScreen extends StatefulWidget {
   const BeforeWeStartScreen({
     super.key,
     this.pattern = BreathPattern.fourSevenEight,
+    this.showPatternTabs,
   });
 
   static const String route = '/before-we-start';
 
   final BreathPattern pattern;
+  final bool? showPatternTabs;
 
   @override
   State<BeforeWeStartScreen> createState() => _BeforeWeStartScreenState();
@@ -47,6 +49,7 @@ class _BeforeWeStartScreenState extends State<BeforeWeStartScreen> {
           MaterialPageRoute(
             builder: (_) => BreathingScreen(
               pattern: widget.pattern,
+              showPatternTabs: widget.showPatternTabs,
               cycles: _cycles,
               sound: _sound,
             ),

@@ -27,7 +27,7 @@ class _ExerciseChooseScreenState extends State<ExerciseChooseScreen> {
 
   void _continue() {
     final target = switch (_selected) {
-      0 => const BeforeWeStartScreen(pattern: BreathPattern.fourSevenEight),
+      0 => const BeforeWeStartScreen(pattern: BreathPattern.box, showPatternTabs: false),
       1 => const BeforeWeStartScreen(pattern: BreathPattern.fourSevenEight),
       2 => const BeforeWeStartScreen(pattern: BreathPattern.fourFourFour),
       _ => const SighScreen(),

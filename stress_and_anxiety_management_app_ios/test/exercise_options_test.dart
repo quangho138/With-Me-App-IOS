@@ -13,7 +13,7 @@ void main() {
     expect(BreathPattern.fourFourFour.roundSeconds,12);
   });
   for (final entry in [
-    ('De-stress Your Day', BreathPattern.fourSevenEight),
+    ('De-stress Your Day', BreathPattern.box),
     ('Ease Your Sleep', BreathPattern.fourSevenEight),
     ('Strengthen Your Focus', BreathPattern.fourFourFour),
   ]) {
@@ -38,8 +38,9 @@ void main() {
         await t.tap(find.text('Next'));
         await t.pump();
         await t.pump(const Duration(milliseconds: 400));
-        expect(find.text('4 · 7 · 8'), findsOneWidget);
-        expect(find.text('4 · 4 · 4 · 4'), findsNothing);
+        expect(find.text('4 · 7 · 8'), findsNothing);
+        expect(find.text('4 · 4 · 4 · 4'), findsOneWidget);
+        expect(t.widget<BreathingScreen>(find.byType(BreathingScreen)).showPatternTabs, isFalse);
         expect(find.text('4 · 4 · 4'), findsNothing);
       }
       await t.pumpWidget(const SizedBox());
