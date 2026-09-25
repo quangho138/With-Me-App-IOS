@@ -1,0 +1,27 @@
+{
+  "waves": {
+    "audio": "https://assets.mixkit.co/active_storage/sfx/1196/1196.wav",
+    "page": "https://mixkit.co/free-stock-video/waves-coming-to-the-beach-5016/",
+    "video": "https://assets.mixkit.co/videos/5016/5016-720.mp4"
+  },
+  "birds": {
+    "audio": "https://assets.mixkit.co/active_storage/sfx/2472/2472.wav",
+    "page": "https://mixkit.co/free-stock-video/bird-singing-in-a-tree-2560/",
+    "video": "https://assets.mixkit.co/videos/2560/2560-720.mp4"
+  },
+  "forest": {
+    "audio": "https://assets.mixkit.co/active_storage/sfx/2427/2427.wav",
+    "page": "https://mixkit.co/free-stock-video/branches-swaying-in-the-wind-95/",
+    "video": "https://assets.mixkit.co/videos/95/95-720.mp4"
+  },
+  "rain": {
+    "audio": "https://assets.mixkit.co/active_storage/sfx/2393/2393.wav",
+    "page": "https://mixkit.co/free-stock-video/raindrops-on-green-leaves-2206/",
+    "video": "https://assets.mixkit.co/videos/2206/2206-720.mp4"
+  },
+  "fire": {
+    "audio": "https://assets.mixkit.co/active_storage/sfx/1330/1330.wav",
+    "page": "https://mixkit.co/free-stock-video/wood-burning-in-an-outdoor-fire-1243/",
+    "video": "https://assets.mixkit.co/videos/1243/1243-720.mp4"
+  }
+}

@@ -1,0 +1,1 @@
+Original procedural ambient sound beds created for With Me. Stereo 24 kHz / 16-bit PCM, 32-second loops. No third-party samples or attribution obligations. Regenerate with node tool/generate_ambience.mjs. These are synthesized interpretations, not field recordings.

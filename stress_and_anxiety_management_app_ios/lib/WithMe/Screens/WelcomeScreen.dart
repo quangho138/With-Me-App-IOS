@@ -37,10 +37,11 @@ class WelcomeScreen extends StatelessWidget {
           const SizedBox(height: WithMeSpace.md),
           const Text('Here. With you.', style: WithMeText.accent),
           const Spacer(),
-          const WithMeAvatar(size: 139, expression: MascotExpression.happy),
-          const Spacer(),
+          const WithMeAvatar(size: 112, expression: MascotExpression.encouraging),
+          const SizedBox(height: WithMeSpace.md),
           WithMeButton(
             label: 'Sign Up',
+            height: 48,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const CreateAccountScreen()),
             ),
@@ -48,6 +49,7 @@ class WelcomeScreen extends StatelessWidget {
           const SizedBox(height: WithMeSpace.md),
           WithMeButton(
             label: 'Log In',
+            height: 48,
             filled: false,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const WithMeLoginScreen()),
@@ -81,7 +83,7 @@ class _GoogleButton extends StatelessWidget {
         ),
       ),
       child: Container(
-        height: 52,
+        height: 44,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: WithMeColors.cream,

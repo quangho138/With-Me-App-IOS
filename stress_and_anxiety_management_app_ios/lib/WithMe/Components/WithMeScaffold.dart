@@ -28,6 +28,7 @@ class WithMeScaffold extends StatelessWidget {
     this.bottomNav,
     this.scrollable = true,
     this.dimmed = false,
+    this.background,
   });
 
   /// The mascot-and-wordmark lockup. Absent on the welcome screen, which shows
@@ -55,6 +56,7 @@ class WithMeScaffold extends StatelessWidget {
   final bool scrollable;
 
   final bool dimmed;
+  final Widget? background;
 
   @override
   Widget build(BuildContext context) {
@@ -92,29 +94,36 @@ class WithMeScaffold extends StatelessWidget {
 
     return WithMeBackdrop(
       dimmed: dimmed,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: Padding(
-            padding: WithMeSpace.page,
-            child: scrollable
-                ? content
-                // Fixed-height screens lay out against Spacers, which cannot
-                // shrink. Give them the viewport as a minimum and let anything
-                // shorter than the 844 pt reference scroll rather than
-                // overflow.
-                : LayoutBuilder(
-                    builder: (context, constraints) => SingleChildScrollView(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight,
-                        ),
-                        child: IntrinsicHeight(child: content),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (background != null) Positioned.fill(child: background!),
+          Scaffold(
+            backgroundColor: Colors.transparent,
+            body: SafeArea(
+              child: Padding(
+                padding: WithMeSpace.page,
+                child: scrollable
+                    ? content
+                    // Fixed-height screens lay out against Spacers, which cannot
+                    // shrink. Give them the viewport as a minimum and let anything
+                    // shorter than the 844 pt reference scroll rather than
+                    // overflow.
+                    : LayoutBuilder(
+                        builder: (context, constraints) =>
+                            SingleChildScrollView(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight,
+                                ),
+                                child: IntrinsicHeight(child: content),
+                              ),
+                            ),
                       ),
-                    ),
-                  ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -127,15 +136,15 @@ class _Lockup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: WithMeSpace.md, bottom: WithMeSpace.sm),
+      padding: const EdgeInsets.only(
+        top: WithMeSpace.md,
+        bottom: WithMeSpace.sm,
+      ),
       child: Row(
         children: [
           const WithMeAvatarBadge(size: 30),
           const SizedBox(width: WithMeSpace.sm),
-          Text(
-            'With Me',
-            style: WithMeText.wordmark.copyWith(fontSize: 22),
-          ),
+          Text('With Me', style: WithMeText.wordmark.copyWith(fontSize: 22)),
         ],
       ),
     );
@@ -157,7 +166,10 @@ class _Title extends StatelessWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.only(top: WithMeSpace.sm, bottom: WithMeSpace.lg),
+      padding: const EdgeInsets.only(
+        top: WithMeSpace.sm,
+        bottom: WithMeSpace.lg,
+      ),
       child: onBack == null
           ? Center(child: label)
           : Row(
