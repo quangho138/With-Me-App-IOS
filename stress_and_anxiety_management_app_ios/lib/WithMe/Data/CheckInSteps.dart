@@ -220,10 +220,10 @@ const Map<String, List<String>> kReflectionPrompts = {
 
 /// Immediate exercises (`image25.png`).
 const List<(String, String, Color)> kExercises = [
-  ('Breathing Exercise', '2 min · suggested for you', WithMeColors.peach),
-  ('Breathing, Focus Exercise', '3 min', WithMeColors.mint),
-  ('Sleeping Relaxation exercise', '5 min', WithMeColors.pink),
-  ('Other exercises', '', WithMeColors.slate),
+  ('De-stress Your Day', '4 · 7 · 8 breathing', WithMeColors.mint),
+  ('Ease Your Sleep', '4 · 7 · 8 breathing', WithMeColors.peach),
+  ('Strengthen Your Focus', '4 · 4 · 4 breathing', WithMeColors.pink),
+  ('Psychological Sigh', 'Deep inhale · two quick inhales · exhale', WithMeColors.slate),
 ];
 
 /// The longer guided set (`image26.png`).
