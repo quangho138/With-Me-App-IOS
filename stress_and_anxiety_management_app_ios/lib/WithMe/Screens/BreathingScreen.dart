@@ -7,7 +7,6 @@ import '../Components/WithMeControls.dart';
 import '../Components/WithMeScaffold.dart';
 import '../Exercise/AmbientAudio.dart';
 import '../Exercise/BreathSession.dart';
-import '../Exercise/NatureScene.dart';
 import '../Exercise/NatureVideo.dart';
 import '../Theme/WithMeTheme.dart';
 
@@ -196,7 +195,8 @@ class _BreathingScreenState extends State<BreathingScreen>
         final label = complete ? 'Complete' : phase.$1;
         final instruction = complete ? '' : '${phase.$1} ${phase.$2} seconds';
         return WithMeScaffold(
-          background: NatureVideo(sound: widget.sound),
+          // Reduced motion freezes the footage on one frame.
+          background: NatureVideo(sound: widget.sound, still: reduce),
           title: _pattern.title,
           onBack: () {
             _pause();
@@ -443,166 +443,6 @@ class _PathPainter extends CustomPainter {
       oldDelegate.progress != progress ||
       oldDelegate.square != square ||
       oldDelegate.phase != phase;
-}
-
-class _BreathingOrb extends StatelessWidget {
-  const _BreathingOrb({
-    required this.label,
-    required this.phase,
-    required this.count,
-    required this.progress,
-    required this.started,
-    required this.complete,
-    required this.paused,
-    required this.reducedMotion,
-  });
-  final String label, phase;
-  final int count;
-  final double progress;
-  final bool started, complete, paused, reducedMotion;
-  @override
-  Widget build(BuildContext context) {
-    final eased = Curves.easeInOutSine.transform(progress);
-    final expansion = !started || complete
-        ? 0.35
-        : switch (phase) {
-            'Inhale' => eased,
-            'Exhale' => 1 - eased,
-            'Hold' => 1.0,
-            _ => 0.0,
-          };
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final diameter = math.min(constraints.maxWidth, constraints.maxHeight);
-        return Center(
-          child: SizedBox.square(
-            dimension: diameter,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Transform.scale(
-                  scale: reducedMotion ? 1 : .76 + .24 * expansion,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: WithMeColors.cream.withValues(alpha: .9),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: .85),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: WithMeColors.cream.withValues(alpha: .17),
-                          spreadRadius: 11,
-                        ),
-                        BoxShadow(
-                          color: WithMeColors.cream.withValues(alpha: .1),
-                          spreadRadius: 23,
-                        ),
-                        const BoxShadow(
-                          color: Color(0x203c7168),
-                          blurRadius: 30,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (started && !complete && !reducedMotion)
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _Orbit(
-                        progress: progress,
-                        scale: .76 + .24 * expansion,
-                      ),
-                    ),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.all(25),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (complete)
-                          const Icon(
-                            Icons.check_rounded,
-                            color: WithMeColors.teal,
-                            size: 32,
-                          ),
-                        Text(
-                          label,
-                          textAlign: TextAlign.center,
-                          style: WithMeText.title.copyWith(
-                            fontSize: started && !complete ? 26 : 21,
-                          ),
-                        ),
-                        if (started && !complete)
-                          Text(
-                            count.toString(),
-                            key: const ValueKey('breath-count'),
-                            style: WithMeText.title.copyWith(
-                              fontSize: 34,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        if (paused)
-                          Text(
-                            'PAUSED',
-                            style: WithMeText.caption.copyWith(
-                              fontSize: 10,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                        if (!started)
-                          Text(
-                            'Breathe with me',
-                            textAlign: TextAlign.center,
-                            style: WithMeText.accent.copyWith(fontSize: 17),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _Orbit extends CustomPainter {
-  _Orbit({required this.progress, required this.scale});
-  final double progress, scale;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = size.shortestSide * scale / 2;
-    final paint = Paint()
-      ..color = WithMeColors.teal.withValues(alpha: .2)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(center, radius, paint);
-    paint.color = WithMeColors.teal.withValues(alpha: .65);
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      math.pi * 2 * progress,
-      false,
-      paint,
-    );
-    final angle = -math.pi / 2 + math.pi * 2 * progress;
-    canvas.drawCircle(
-      center + Offset(math.cos(angle), math.sin(angle)) * radius,
-      4.5,
-      Paint()..color = WithMeColors.teal,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_Orbit oldDelegate) =>
-      oldDelegate.progress != progress || oldDelegate.scale != scale;
 }
 
 class BoxBreathingInfoScreen extends StatelessWidget {

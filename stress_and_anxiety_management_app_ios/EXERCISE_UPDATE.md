@@ -4,16 +4,20 @@ The existing Flutter app is preserved. The changed product screen is BreathingSc
 
 ## Experience
 
-- Original animated vector scenes for Waves, Birds (including a nest), Forest, Rain (including a waterfall), and Fire. None provides a quiet landscape with no audio.
-- Breathing orb expands on inhale, holds its size during the full hold, contracts on exhale, and remains small during the final box-breathing rest. A moving marker shows phase progress.
-- Both 4-7-8 and 4-4-4-4 patterns; selected cycle count; phase countdown; session progress; completion and replay.
-- Pause/resume preserves fractional seconds. Restart and pattern changes reset the session. App interruptions pause it. Exiting releases the audio player.
-- Mute and volume controls, recoverable audio failure message, manual motion toggle, and system reduced-motion support.
-- Existing Quicksand/Yellowtail fonts, mascot, teal buttons, cream cards, and mint/peach background.
+(Updated 25 Sep 2026 when merged into develop, to match the code as it now is.)
+
+- Four exercises: De-stress Your Day (4-7-8), Ease Your Sleep (4-7-8), Strengthen Your Focus (4-4-4), and the Physiological Sigh (deep inhale, two quick inhales, long exhale, with a recorded breath track and animated lungs). Box breathing (4-4-4-4) is still reachable from its info screen and the pattern tabs.
+- Background: silent Mixkit nature footage for Waves, Birds, Forest, Rain and Fire, with a plain dark colour for None or when video cannot load.
+- A dot moves along a triangle (or a square for box breathing) to show each phase, with the phase name and length above it. Cycle count, completion and replay.
+- Pause/resume preserves fractional seconds. Restart and pattern changes reset the session. Leaving the app pauses it. Exiting releases the audio player.
+- Recoverable audio failure message. The Motion on/off toggle and the system reduced-motion setting freeze the nature video on one frame.
+- There are no in-app mute or volume controls on the breathing screen (the sigh screen has a breath sound on/off button).
 
 ## Audio
 
-Five original synthesized stereo ambience loops are bundled in assets/audio. They work offline and use no third-party recordings. They are synthesized interpretations of nature, not field recordings. The reproducible generator is tool/generate_ambience.mjs. Audio playback uses audioplayers (resolved version recorded in pubspec.lock).
+The five nature sounds in assets/audio are Mixkit free sound effects, bundled as WAV files. Sources for each are listed in tool/media-source/README.md. Mixkit's free license needs no attribution but does not allow sharing the raw files on their own, so the raw downloads are not committed. sigh-breath.wav is built from a CC0 recording (see assets/audio/SIGH-CREDITS.md) by tool/make_sigh_audio.py. Playback uses audioplayers.
+
+Known issue: the WAV files are large (birds.wav is about 55 MB). Converting them to AAC or OGG would shrink the app a lot.
 
 ## Run
 

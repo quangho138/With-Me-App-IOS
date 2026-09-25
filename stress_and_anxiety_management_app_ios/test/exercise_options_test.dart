@@ -57,7 +57,7 @@ void main() {
           home: const ExerciseChooseScreen(),
         ),
       );
-      await t.tap(find.text('Psychological Sigh'));
+      await t.tap(find.text('Physiological Sigh'));
       await t.pump();
       await t.tap(find.text('Continue'));
       await t.pump();

@@ -223,7 +223,7 @@ const List<(String, String, Color)> kExercises = [
   ('De-stress Your Day', '4 · 7 · 8 breathing', WithMeColors.mint),
   ('Ease Your Sleep', '4 · 7 · 8 breathing', WithMeColors.peach),
   ('Strengthen Your Focus', '4 · 4 · 4 breathing', WithMeColors.pink),
-  ('Psychological Sigh', 'Deep inhale · two quick inhales · exhale', WithMeColors.slate),
+  ('Physiological Sigh', 'Deep inhale · two quick inhales · exhale', WithMeColors.slate),
 ];
 
 /// The longer guided set (`image26.png`).

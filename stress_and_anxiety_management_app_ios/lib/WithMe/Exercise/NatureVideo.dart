@@ -4,9 +4,12 @@ import 'package:video_player/video_player.dart';
 /// Full-bleed, silent stock footage. Ambient sound is owned exclusively by
 /// AmbientAudio so a video can never leak its own audio into another choice.
 class NatureVideo extends StatefulWidget {
-  const NatureVideo({super.key, required this.sound});
+  const NatureVideo({super.key, required this.sound, this.still = false});
 
   final String sound;
+
+  /// Reduced motion: hold the current frame instead of playing.
+  final bool still;
 
   @override
   State<NatureVideo> createState() => _NatureVideoState();
@@ -41,7 +44,15 @@ class _NatureVideoState extends State<NatureVideo> {
       return;
     }
     setState(() => _controller = controller);
-    await controller.play();
+    if (!widget.still) await controller.play();
+  }
+
+  @override
+  void didUpdateWidget(NatureVideo old) {
+    super.didUpdateWidget(old);
+    final controller = _controller;
+    if (controller == null || old.still == widget.still) return;
+    widget.still ? controller.pause() : controller.play();
   }
 
   @override

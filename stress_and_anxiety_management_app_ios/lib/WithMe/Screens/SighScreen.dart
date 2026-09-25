@@ -102,7 +102,7 @@ class _SighScreenState extends State<SighScreen>
             _ => 1 - progress,
           };
     return WithMeScaffold(
-      title: 'Psychological Sigh',
+      title: 'Physiological Sigh',
       onBack: () => Navigator.of(context).pop(),
       action: WithMeButton(
         label: _session.complete
