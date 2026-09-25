@@ -92,12 +92,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
     });
   }
 
+  /// The four check-in faces, plus the older five words.
   static double _moodScore(String mood) => switch (mood.toLowerCase()) {
-        'rough' => 1,
+        'not good' || 'rough' => 1,
         'low' => 2,
         'okay' => 3,
-        'pretty good' => 4,
-        'good' => 5,
+        'good' || 'pretty good' => 4,
+        'great' => 5,
         _ => 3,
       };
 

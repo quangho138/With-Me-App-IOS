@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../../Database/LocalDatabase.dart';
+import '../Components/ScenicKit.dart';
 import '../Components/WithMeCards.dart';
 import '../Components/WithMeControls.dart';
 import '../Components/WithMeScaffold.dart';
 import '../Data/CheckInSteps.dart';
 import '../Mascot/MascotExpression.dart';
+import '../Mascot/RealMascot.dart';
 import '../Mascot/WithMeAvatar.dart';
 import '../Theme/WithMeTheme.dart';
+import 'SettingsScreen.dart';
 import 'YourDayScreen.dart';
 
 /// Today's guided check-in — `image7.png` through `image23.png`, opened from
@@ -42,8 +45,7 @@ class DailyCheckInScreen extends StatefulWidget {
   /// Each page's heading, in order - what the calendar lists for today.
   /// Keep it in step with `_step`.
   static List<String> pageTitles(String? name) => [
-        'Hello ${name == null || name.isEmpty ? 'there' : name}, '
-            'how are you feeling today?',
+        "Hi! I'm here with you. How are you feeling today?",
         'On a scale of 1 to 5, how would you rate your stress today?',
         'How motivated do you feel to make a positive change today?',
         'Where is most of your stress coming from right now?',
@@ -76,20 +78,7 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
   /// Which way the last move went, so the transition slides with it.
   bool _forward = true;
 
-  String? _name;
-
   static const int _pageCount = DailyCheckInScreen.pageCount;
-
-  @override
-  void initState() {
-    super.initState();
-    _db
-        .getUserName()
-        .then((n) {
-          if (mounted) setState(() => _name = n);
-        })
-        .catchError((_) {});
-  }
 
   @override
   void dispose() {
@@ -171,17 +160,15 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
     }
   }
 
-  static String _moodLabel(int index) =>
-      const ['Rough', 'Low', 'Okay', 'Pretty good', 'Good'][index];
-
-  /// The design shows a segmented progress bar on the scale steps only
-  /// (`image8`, `image9`), and the lockup everywhere else.
-  bool get _showsProgress => _index == 1 || _index == 2;
+  /// The four faces on the greeting, as stored.
+  static String _moodLabel(int index) => MoodFace.values[index].label;
 
   @override
   Widget build(BuildContext context) {
+    // The first four pages are the V2 reference screens 2-5, on the beach.
+    if (_index < 4) return _scenic(context);
+
     return WithMeScaffold(
-      lockup: !_showsProgress,
       onBack: _back,
       action: WithMeButton(
         label: _actionLabel,
@@ -191,10 +178,6 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_showsProgress) ...[
-            const SizedBox(height: WithMeSpace.md),
-            StepProgressBar(count: _pageCount, index: _index),
-          ],
           const SizedBox(height: WithMeSpace.lg),
           // One step at a time rather than a PageView: the page shell measures
           // its content so a short device scrolls instead of overflowing, and
@@ -222,30 +205,8 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
     );
   }
 
-  /// The ten steps, in order.
+  /// Pages 4 to 9 - the first four are built by [_scenic].
   Widget _step(int index) => switch (index) {
-        0 => _MoodStep(answers: _answers, name: _name, onChanged: _touch),
-        1 => _ScaleStep(
-            question:
-                'On a scale of 1 to 5, how would you rate your stress today?',
-            value: _answers.stress,
-            lowLabel: 'Calm',
-            highLabel: 'Overwhelmed',
-            selectedColor: WithMeColors.coral,
-            mascotSize: 120,
-            onChanged: (v) => _touch(() => _answers.stress = v),
-          ),
-        2 => _ScaleStep(
-            question:
-                'How motivated do you feel to make a positive change today?',
-            value: _answers.motivation,
-            lowLabel: 'Not today',
-            highLabel: 'Ready',
-            reassurance: "Low is okay. We'll keep it small.",
-            mascotSize: 110,
-            onChanged: (v) => _touch(() => _answers.motivation = v),
-          ),
-        3 => _AreaStep(answers: _answers, onChanged: _touch),
         4 => _StressorStep(
             answers: _answers,
             custom: _customStressor,
@@ -261,6 +222,250 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
         8 => _StrategyStep(answers: _answers, onChanged: _touch),
         _ => _StrategyDetailStep(answers: _answers, onChanged: _touch),
       };
+
+  // ---------------------------------------------------------------------------
+  // The V2 pages - reference screens 2 to 5
+  // ---------------------------------------------------------------------------
+
+  /// The rendered companion's pose for pages 0 to 3. Each page opens on the
+  /// pose the reference shows, then answers move it: hard ones make it sad,
+  /// middling ones get a smirk, good ones a happy hop. The reference's own
+  /// example answers (stress 4, motivation 3) land on its pictured poses.
+  RealPose get _realPose {
+    final a = _answers;
+    switch (_index) {
+      case 0:
+        return switch (a.mood) {
+          null => RealPose.heart,
+          0 => RealPose.sad,
+          1 => RealPose.smirk,
+          2 => RealPose.happy,
+          _ => RealPose.excited,
+        };
+      case 1:
+        return switch (a.stress) {
+          null => RealPose.think,
+          1 || 2 => RealPose.happy,
+          3 => RealPose.smirk,
+          4 => RealPose.think,
+          _ => RealPose.sad,
+        };
+      case 2:
+        return switch (a.motivation) {
+          null => RealPose.idle,
+          1 => RealPose.sad,
+          2 => RealPose.smirk,
+          _ => RealPose.excited,
+        };
+      default:
+        return a.area == null ? RealPose.think : RealPose.sad;
+    }
+  }
+
+  Widget _scenic(BuildContext context) {
+    return Scaffold(
+      body: ScenicBackdrop(
+        scene: 'sunset',
+        child: LayoutBuilder(
+          builder: (context, box) {
+            final h = box.maxHeight;
+            final w = box.maxWidth;
+            // The area grid is tall, so the companion sits smaller there,
+            // as on the reference.
+            final mascot = _index == 3 ? h * 0.36 : h * 0.45;
+
+            return Stack(
+              children: [
+                // Sitting on the rock, behind the Continue pill.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: h * 0.07,
+                  child: Center(
+                    child: RealMascot(pose: _realPose, height: mascot),
+                  ),
+                ),
+                SafeArea(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        height: 44,
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 8),
+                            ScenicBack(onTap: _back),
+                            Expanded(
+                              child: Center(
+                                child: _index == 0
+                                    ? const SizedBox.shrink()
+                                    : ScenicProgress(
+                                        value: (_index + 1) / _pageCount,
+                                        width: w * 0.36,
+                                      ),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 48,
+                              child: _index == 0 ? _settingsGear(context) : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: w * 0.07),
+                        child: AnimatedSwitcher(
+                          duration: WithMeMotion.medium,
+                          transitionBuilder: (child, animation) =>
+                              FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: Offset(_forward ? 0.08 : -0.08, 0),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          ),
+                          child: KeyedSubtree(
+                            key: ValueKey(_index),
+                            child: _scenicContent(),
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: w * 0.1),
+                        child: ScenicPill(
+                          label: 'Continue',
+                          height: 60,
+                          onPressed: _answered ? _next : null,
+                        ),
+                      ),
+                      SizedBox(height: h * 0.025),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _settingsGear(BuildContext context) => Semantics(
+        button: true,
+        label: 'Settings',
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          ),
+          child: const Icon(
+            Icons.settings_rounded,
+            color: Colors.white,
+            size: 26,
+            shadows: [Shadow(color: Color(0x66000000), blurRadius: 6)],
+          ),
+        ),
+      );
+
+  Widget _scenicContent() {
+    final a = _answers;
+    switch (_index) {
+      case 0:
+        // The faces sit at the top of the greeting, above what the
+        // companion says.
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            MoodFacesCard(
+              value: a.mood == null ? null : MoodFace.values[a.mood!],
+              onChanged: (f) => _touch(() => a.mood = f.index),
+            ),
+            const SizedBox(height: 16),
+            const SpeechBubble(
+              tailAt: 0.6,
+              child: BubbleText(
+                "Hi!\nI'm here with you.\nHow are you\nfeeling today?",
+                size: 27,
+              ),
+            ),
+          ],
+        );
+      case 1:
+        return SpeechBubble(
+          tailAt: 0.62,
+          child: Column(
+            children: [
+              const BubbleText(
+                'On a scale of 1 to 5,\nhow would you rate\nyour stress today?',
+              ),
+              const SizedBox(height: 20),
+              NumberChoice(
+                value: a.stress,
+                onChanged: (v) => _touch(() => a.stress = v),
+              ),
+            ],
+          ),
+        );
+      case 2:
+        return SpeechBubble(
+          tailAt: 0.62,
+          child: Column(
+            children: [
+              const BubbleText(
+                'How motivated\ndo you feel to make\na positive change\ntoday?',
+              ),
+              const SizedBox(height: 20),
+              NumberChoice(
+                value: a.motivation,
+                onChanged: (v) => _touch(() => a.motivation = v),
+              ),
+            ],
+          ),
+        );
+      default:
+        const areas = [
+          ('Home', Icons.home_rounded, Color(0xFF3E9C52)),
+          ('Work', Icons.work_rounded, Color(0xFF1C7C84)),
+          ('School', Icons.school_rounded, Color(0xFF1C7C84)),
+          ('Social', Icons.groups_rounded, Color(0xFFEA6A58)),
+        ];
+        Widget tile(int i) => AreaTile(
+              label: areas[i].$1,
+              icon: areas[i].$2,
+              color: areas[i].$3,
+              selected: a.area == areas[i].$1,
+              onTap: () => _touch(() => a.area = areas[i].$1),
+            );
+        return SpeechBubble(
+          tailAt: 0.62,
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+          child: Column(
+            children: [
+              const BubbleText(
+                'Where is most of your\nstress coming from\nright now?',
+              ),
+              const SizedBox(height: 16),
+              Row(children: [
+                Expanded(child: tile(0)),
+                const SizedBox(width: 12),
+                Expanded(child: tile(1)),
+              ]),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(child: tile(2)),
+                const SizedBox(width: 12),
+                Expanded(child: tile(3)),
+              ]),
+            ],
+          ),
+        );
+    }
+  }
 
   /// How the mascot feels about the current page's answer. Idle - alive but
   /// waiting - until something is picked; then hard answers make it sad,
@@ -280,11 +485,8 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
 
     final a = _answers;
     return switch (_index) {
-      // Mood runs 0 (Rough) to 4 (Good).
-      0 => scale(a.mood == null ? null : a.mood! + 1),
-      1 => scale(a.stress, highIsGood: false),
-      2 => scale(a.motivation),
-      3 => a.area == null ? MascotExpression.idle : MascotExpression.concerned,
+      // Pages 0-3 use the rendered companion - see [_realPose].
+      0 || 1 || 2 || 3 => MascotExpression.idle,
       4 => a.stressors.isEmpty
           ? MascotExpression.idle
           : MascotExpression.concerned,
@@ -321,183 +523,6 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
       _index == _pageCount - 1 ? 'Finish check-in' : 'Continue';
 
   void _touch(VoidCallback change) => setState(change);
-}
-
-// --- image7 -----------------------------------------------------------------
-
-class _MoodStep extends StatelessWidget {
-  const _MoodStep({
-    required this.answers,
-    required this.name,
-    required this.onChanged,
-  });
-
-  final CheckInAnswers answers;
-  final String? name;
-  final void Function(VoidCallback) onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final who = name == null || name!.isEmpty ? 'there' : name!;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        QuestionCard(question: 'Hello $who,\nhow are you feeling today?'),
-        const SizedBox(height: WithMeSpace.md),
-        WithMeCard(
-          // 24, not the card default of 16. Measured off image7: the pink
-          // swatch starts at x = 48 against a card edge of 24, and at 16 the
-          // five circles spread wider apart than the design draws them.
-          padding: const EdgeInsets.all(WithMeSpace.xl),
-          child: Column(
-            children: [
-              MoodSelector(
-                value: answers.mood,
-                onChanged: (v) => onChanged(() => answers.mood = v),
-              ),
-              if (answers.mood != null) ...[
-                const SizedBox(height: WithMeSpace.md),
-                Text(
-                  _caption(answers.mood!),
-                  style: WithMeText.option.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: WithMeColors.teal,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        const Spacer(),
-        const Center(
-          child: _StepMascot(size: 120),
-        ),
-        const Spacer(),
-        const ReassuranceCard(text: 'No number, no score. Just how it feels.'),
-      ],
-    );
-  }
-
-  static String _caption(int mood) => const [
-        'A rough one today',
-        'A bit low today',
-        'Okay today',
-        'Pretty good today',
-        'Good today',
-      ][mood];
-}
-
-// --- image8, image9 ---------------------------------------------------------
-
-class _ScaleStep extends StatelessWidget {
-  const _ScaleStep({
-    required this.question,
-    required this.value,
-    required this.onChanged,
-    this.lowLabel,
-    this.highLabel,
-    this.reassurance,
-    this.selectedColor,
-    required this.mascotSize,
-  });
-
-  final String question;
-  final int? value;
-  final ValueChanged<int> onChanged;
-  final String? lowLabel;
-  final String? highLabel;
-  final String? reassurance;
-  final Color? selectedColor;
-
-  /// Measured per mockup — 120 on image8, 110 on image9.
-  final double mascotSize;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        QuestionCard(question: question, minHeight: 128),
-        const SizedBox(height: WithMeSpace.lg),
-        ScaleSelector(
-          value: value,
-          onChanged: onChanged,
-          lowLabel: lowLabel,
-          highLabel: highLabel,
-          selectedColor: selectedColor,
-        ),
-        if (reassurance != null) ...[
-          const SizedBox(height: WithMeSpace.lg),
-          ReassuranceCard(text: reassurance!),
-        ],
-        const Spacer(),
-        Center(
-          child: _StepMascot(size: mascotSize),
-        ),
-        const Spacer(),
-      ],
-    );
-  }
-}
-
-// --- image10 ----------------------------------------------------------------
-
-class _AreaStep extends StatelessWidget {
-  const _AreaStep({required this.answers, required this.onChanged});
-
-  final CheckInAnswers answers;
-  final void Function(VoidCallback) onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    void pick(String area) => onChanged(() {
-          answers.area = area;
-          answers.stressors.clear();
-        });
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const QuestionCard(
-          question: 'Where is most of your stress coming from right now?',
-        ),
-        const SizedBox(height: WithMeSpace.lg),
-        for (var row = 0; row < 2; row++) ...[
-          if (row > 0) const SizedBox(height: kTileGutter),
-          Row(
-            children: [
-              for (var col = 0; col < 2; col++) ...[
-                if (col > 0) const SizedBox(width: kTileGutter),
-                Expanded(
-                  child: Builder(builder: (_) {
-                    final option = kStressAreas[row * 2 + col];
-                    return OptionGridCard(
-                      label: option.label,
-                      tint: option.color,
-                      selected: answers.area == option.label,
-                      onTap: () => pick(option.label),
-                    );
-                  }),
-                ),
-              ],
-            ],
-          ),
-        ],
-        const SizedBox(height: kTileGutter),
-        OptionRow(
-          label: 'Something else',
-          selected: answers.area == 'Something else',
-          onTap: () => pick('Something else'),
-        ),
-        const Spacer(),
-        const Center(
-          child: _StepMascot(size: 110),
-        ),
-        const Spacer(),
-      ],
-    );
-  }
 }
 
 // --- image11 - image14 ------------------------------------------------------

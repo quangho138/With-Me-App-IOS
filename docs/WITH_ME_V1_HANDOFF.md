@@ -186,6 +186,56 @@ within the flow, then to the calendar, then home; and back present on Menu,
 Insights and Exercises. The nine screens that matched their mockups before
 still match.
 
+## V2: the realistic screens (branch `design-v2-realistic`)
+
+The product owner supplied a new reference board, `docs/design_v2/reference.webp`
+(crops of each screen alongside), and asked for its five screens exactly:
+welcome, then the greeting, stress, motivation and stress-area pages - the
+first four pages of the calendar's daily check-in. One change from the board,
+on request: the greeting's four faces sit at the top.
+
+**The art.** The board is only 1672 x 941, so each character is about 260
+px tall - too small to crop. The poses and scenery were regenerated at full
+resolution with Codex's image generator (`image_gen`), passing the board's
+crops as references so the character stays on-model: twelve transparent
+1024 x 1536 poses (wave, heart, think, excited, idle, sad, smirk, happy, and
+blink variants) and two beach plates, in `assets/v2/`. Those are the
+sources; the app bundles only `assets/v2/app/` (about 1.1 MB of WebP).
+
+`tool/prepare_mascot_v2.py` turns the sources into app frames. It registers
+every pose to a base by the head (scale search plus phase correlation) so a
+change of pose never makes the character jump; builds blink frames as a swap
+of only the eyes, so a blink cannot shift the body; and cuts the raised arm
+out of the wave pose as its own layer with a pivot at the shoulder. Re-run it
+after regenerating any source.
+
+**The motion** (`RealMascot`). Breathing, a faint sway and irregular blinks
+everywhere. On welcome the arm swings from the shoulder in bursts - only
+between about +1 and +12 degrees, toward the head, where the cut leaves no
+seam. The heart the character holds glows. Changing pose cross-fades and
+plays a reaction: a hop for happy and excited, a slump for sad, a shrug for
+the smirk. Reduced motion holds a still.
+
+**Reactions.** Each page opens on the pose the board shows and answers move
+it (`_realPose`): Not good / Okay / Good / Great -> sad / smirk / happy /
+excited; stress 1-2 happy, 3 smirk, 4 thinking, 5 sad; motivation 1 sad,
+2 smirk, 3-5 excited; choosing an area -> sad. The board's own example
+answers (stress 4, motivation 3) land on its pictured poses.
+
+**The rest.** `ScenicKit` holds the V2 pieces - painted backdrop, glossy pill,
+speech bubble, progress track, number circles, the four faces, area tiles.
+Type is Quicksand drawn with a thin same-colour outline (`ChunkyText`) to
+reach the board's heavier rounded weight without a new font file. The mood
+scale is now the board's four words; the calendar, progress and day-detail
+screens read them and the older five. Continue still waits for an answer on
+every page. Pages 5-10 of the check-in and the rest of the app keep the V1
+look for now.
+
+Verified: 36 captures and three click-throughs of the web build through the
+semantics tree - 15 on the V2 screens (faces above the bubble, each page
+gated, the path through to the stressors page, back, the settings gear),
+plus the earlier 17 and 21, all passing.
+
 ## The mascot moves, and the check-in waits for answers
 
 Second round of product-owner changes.

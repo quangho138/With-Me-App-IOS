@@ -29,12 +29,15 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('With Me'), findsOneWidget);
-    expect(find.text('Your AI Companion'), findsOneWidget);
-    expect(find.text('Here. With you.'), findsOneWidget);
-    expect(find.text('Sign Up'), findsOneWidget);
-    expect(find.text('Log In'), findsOneWidget);
-    expect(find.text('Continue with Google'), findsOneWidget);
+    // Layered text: the wordmark is halo, outline and fill, and the V2 type
+    // is drawn fill-over-outline for weight - so each label is several
+    // Text widgets.
+    expect(find.text('With Me'), findsWidgets);
+    expect(find.text('Your AI Companion'), findsWidgets);
+    expect(find.text('Here. With you.'), findsWidgets);
+    expect(find.text('Sign Up'), findsWidgets);
+    expect(find.text('Login'), findsWidgets);
+    expect(find.text('Continue with Google'), findsWidgets);
   });
 
   testWidgets('the primary action keeps its measured 60 pt height', (

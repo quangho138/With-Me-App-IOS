@@ -66,18 +66,18 @@ class DemoAccount {
 
   // Written in the voice image45 uses: short, specific, one thought each.
   static const List<_Day> _days = [
-    _Day(16, 42, 'Pretty good', 4, 'Work', 'Workload, Time mgmt',
+    _Day(16, 42, 'Good', 4, 'Work', 'Workload, Time mgmt',
         'Sam, over lunch.',
         'Breathing before the meeting actually helped. Shoulders dropped.'),
     _Day(21, 10, 'Okay', 3, 'Home', 'Financial',
         'Nobody - handled it myself.', 'Box breathing, 4 rounds. Slept better.'),
-    _Day(7, 55, 'Rough', 2, 'Work', 'Boss, Colleagues',
+    _Day(7, 55, 'Not good', 2, 'Work', 'Boss, Colleagues',
         'Mum called at the right moment.', 'Hard morning. Logged it anyway.'),
-    _Day(13, 26, 'Good', 5, 'School', 'Exam pressure', 'Study group.',
+    _Day(13, 26, 'Great', 5, 'School', 'Exam pressure', 'Study group.',
         'Studied in 25-minute blocks instead of one long sit.'),
     _Day(19, 3, 'Okay', 3, 'Social', 'Social media', 'My sister.',
         'Put the phone in a drawer for the evening.'),
-    _Day(8, 38, 'Low', 2, 'Work', 'Workload', 'Told my manager.',
+    _Day(8, 38, 'Not good', 2, 'Work', 'Workload', 'Told my manager.',
         'Too much on at once. Asked for the deadline to move.'),
     _Day(22, 14, 'Good', 4, 'Home', 'Domestic duties', 'Ade came round.',
         'Cooked properly for the first time this week.'),

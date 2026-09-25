@@ -114,13 +114,18 @@ void main() {
 /// Screen name -> builder. Named after the mockup each one is built from, so
 /// `tool/compare_screens.py` can pair them up.
 final Map<String, Widget Function()> _screens = {
-  'image1-welcome': () => const WelcomeScreen(),
+  'v2-1-welcome': () => const WelcomeScreen(),
   'image2-create-account': () => const CreateAccountScreen(),
   'image3-reset-password': () => const ResetPasswordScreen(),
   'image4-profile': () => const ProfileScreen(),
   'image5-home': () => const WithMeHomeScreen(),
   'image6-monthly-calendar': () => const MonthlyCalendarScreen(),
-  'image7to23-daily-check-in': () => const DailyCheckInScreen(),
+  // V2 reference screens (docs/design_v2) - compared by eye, not by
+  // compare_screens.py, which only knows the V1 document.
+  'v2-2-greeting': () => const DailyCheckInScreen(),
+  'v2-3-stress': () => const DailyCheckInScreen(initialStep: 1),
+  'v2-4-motivation': () => const DailyCheckInScreen(initialStep: 2),
+  'v2-5-area': () => const DailyCheckInScreen(initialStep: 3),
   'image24-check-in': () => const CheckInScreen(),
   'image15-signs-choice': () => const DailyCheckInScreen(initialStep: 5),
   'intention-to-change': () => const DailyCheckInScreen(initialStep: 7),
@@ -174,15 +179,14 @@ final Map<String, Future<void> Function(WidgetTester)> _drivers = {
     await tester.tapAt(Offset(box.center.dx - 12, box.bottom - 90));
     await tester.pump();
   },
-  'image7to23-daily-check-in': (tester) async {
-    final dots = find.descendant(
-      of: find.byType(MoodSelector),
-      matching: find.byType(GestureDetector),
-    );
-    if (dots.evaluate().length >= 4) {
-      await tester.tap(dots.at(3));
-      await tester.pump();
-    }
+  // The reference shows stress at 4 and motivation at 3.
+  'v2-3-stress': (tester) async {
+    await tester.tap(find.text('4').last);
+    await tester.pump();
+  },
+  'v2-4-motivation': (tester) async {
+    await tester.tap(find.text('3').last);
+    await tester.pump();
   },
 };
 

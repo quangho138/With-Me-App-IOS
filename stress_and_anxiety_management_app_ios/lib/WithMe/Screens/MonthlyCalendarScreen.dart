@@ -125,7 +125,10 @@ class _MonthlyCalendarScreenState extends State<MonthlyCalendarScreen> {
 
   static bool _isLow(String mood) {
     final m = mood.toLowerCase();
-    return m.contains('rough') || m.contains('sad') || m.contains('bad');
+    return m.contains('not good') ||
+        m.contains('rough') ||
+        m.contains('sad') ||
+        m.contains('bad');
   }
 
   @override
