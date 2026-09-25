@@ -28,6 +28,7 @@ class WithMeScaffold extends StatelessWidget {
     this.bottomNav,
     this.scrollable = true,
     this.dimmed = false,
+    this.background,
   });
 
   /// The mascot-and-wordmark lockup. Absent on the welcome screen, which shows
@@ -58,6 +59,7 @@ class WithMeScaffold extends StatelessWidget {
   final bool scrollable;
 
   final bool dimmed;
+  final Widget? background;
 
   /// The explicit handler, or a plain pop when the navigator has somewhere
   /// to go. Null on a root screen - welcome, or home after signing in -
@@ -116,29 +118,36 @@ class WithMeScaffold extends StatelessWidget {
 
     return WithMeBackdrop(
       dimmed: dimmed,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: Padding(
-            padding: WithMeSpace.page,
-            child: scrollable
-                ? content
-                // Fixed-height screens lay out against Spacers, which cannot
-                // shrink. Give them the viewport as a minimum and let anything
-                // shorter than the 844 pt reference scroll rather than
-                // overflow.
-                : LayoutBuilder(
-                    builder: (context, constraints) => SingleChildScrollView(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight,
-                        ),
-                        child: IntrinsicHeight(child: content),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (background != null) Positioned.fill(child: background!),
+          Scaffold(
+            backgroundColor: Colors.transparent,
+            body: SafeArea(
+              child: Padding(
+                padding: WithMeSpace.page,
+                child: scrollable
+                    ? content
+                    // Fixed-height screens lay out against Spacers, which cannot
+                    // shrink. Give them the viewport as a minimum and let anything
+                    // shorter than the 844 pt reference scroll rather than
+                    // overflow.
+                    : LayoutBuilder(
+                        builder: (context, constraints) =>
+                            SingleChildScrollView(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight,
+                                ),
+                                child: IntrinsicHeight(child: content),
+                              ),
+                            ),
                       ),
-                    ),
-                  ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

@@ -7,7 +7,7 @@ import '../Data/CheckInSteps.dart';
 import '../Theme/WithMeTheme.dart';
 import 'BeforeWeStartScreen.dart';
 import 'BreathingScreen.dart';
-import 'RestYourMindScreen.dart';
+import 'SighScreen.dart';
 
 /// `image25.png` — "Choose an exercise".
 ///
@@ -28,9 +28,9 @@ class _ExerciseChooseScreenState extends State<ExerciseChooseScreen> {
   void _continue() {
     final target = switch (_selected) {
       0 => const BeforeWeStartScreen(pattern: BreathPattern.fourSevenEight),
-      1 => const BeforeWeStartScreen(pattern: BreathPattern.box),
-      2 => const BeforeWeStartScreen(pattern: BreathPattern.fourSevenEight),
-      _ => const RestYourMindScreen(),
+      1 => const BeforeWeStartScreen(pattern: BreathPattern.fourSevenEight),
+      2 => const BeforeWeStartScreen(pattern: BreathPattern.fourFourFour),
+      _ => const SighScreen(),
     };
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => target));
   }
@@ -53,12 +53,62 @@ class _ExerciseChooseScreenState extends State<ExerciseChooseScreen> {
           const SizedBox(height: WithMeSpace.md),
           for (var i = 0; i < kExercises.length; i++) ...[
             if (i > 0) const SizedBox(height: WithMeSpace.md),
-            OptionRow(
-              label: kExercises[i].$1,
-              subtitle: kExercises[i].$2.isEmpty ? null : kExercises[i].$2,
-              dot: kExercises[i].$3,
+            Semantics(
+              button: true,
               selected: _selected == i,
-              onTap: () => setState(() => _selected = i),
+              child: InkWell(
+                onTap: () => setState(() => _selected = i),
+                borderRadius: BorderRadius.circular(16),
+                child: AnimatedContainer(
+                  duration: WithMeMotion.fast,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: _selected == i
+                        ? WithMeColors.teal
+                        : WithMeColors.cream,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: WithMeSpace.cardShadow,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: kExercises[i].$3,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              kExercises[i].$1,
+                              style: WithMeText.option.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: _selected == i
+                                    ? Colors.white
+                                    : WithMeColors.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              kExercises[i].$2,
+                              style: WithMeText.caption.copyWith(
+                                color: _selected == i
+                                    ? Colors.white
+                                    : WithMeColors.inkSoft,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ],

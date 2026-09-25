@@ -1,55 +1,61 @@
 import 'dart:async';
-
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-
+import 'package:flutter/scheduler.dart';
 import '../Components/WithMeCards.dart';
 import '../Components/WithMeControls.dart';
 import '../Components/WithMeScaffold.dart';
+import '../Exercise/AmbientAudio.dart';
+import '../Exercise/BreathSession.dart';
+import '../Exercise/NatureVideo.dart';
 import '../Theme/WithMeTheme.dart';
 
 /// The two patterns the design names.
-enum BreathPattern { fourSevenEight, box }
+enum BreathPattern { fourSevenEight, box, fourFourFour }
 
 extension BreathPatternInfo on BreathPattern {
   String get tab => switch (this) {
-        BreathPattern.fourSevenEight => '4 · 7 · 8',
-        BreathPattern.box => '4 · 4 · 4 · 4',
-      };
+    BreathPattern.fourFourFour => '4 · 4 · 4',
+    BreathPattern.fourSevenEight => '4 · 7 · 8',
+    BreathPattern.box => '4 · 4 · 4 · 4',
+  };
 
   String get title => switch (this) {
-        BreathPattern.fourSevenEight => 'Breathing Exercise',
-        BreathPattern.box => 'Box Breathing',
-      };
+    BreathPattern.fourFourFour => 'Strengthen Your Focus',
+    BreathPattern.fourSevenEight => 'Breathing Exercise',
+    BreathPattern.box => 'Box Breathing',
+  };
 
   String get accent => switch (this) {
-        BreathPattern.fourSevenEight => 'Breathe with me...',
-        BreathPattern.box => 'Four equal sides...',
-      };
+    BreathPattern.fourFourFour => 'Breathe with me...',
+    BreathPattern.fourSevenEight => 'Breathe with me...',
+    BreathPattern.box => 'Four equal sides...',
+  };
 
   /// Phase name, seconds, and the colour of its chip.
   List<(String, int, Color)> get phases => switch (this) {
-        BreathPattern.fourSevenEight => const [
-            ('Inhale', 4, WithMeColors.mint),
-            ('Hold', 7, WithMeColors.peach),
-            ('Exhale', 8, WithMeColors.coral),
-          ],
-        BreathPattern.box => const [
-            ('Inhale', 4, WithMeColors.mint),
-            ('Hold', 4, WithMeColors.peach),
-            ('Exhale', 4, WithMeColors.coral),
-            ('Still', 4, WithMeColors.pink),
-          ],
-      };
+    BreathPattern.fourFourFour => const [
+      ('Inhale', 4, WithMeColors.mint),
+      ('Hold', 4, WithMeColors.peach),
+      ('Exhale', 4, WithMeColors.coral),
+    ],
+    BreathPattern.fourSevenEight => const [
+      ('Inhale', 4, WithMeColors.mint),
+      ('Hold', 7, WithMeColors.peach),
+      ('Exhale', 8, WithMeColors.coral),
+    ],
+    BreathPattern.box => const [
+      ('Inhale', 4, WithMeColors.mint),
+      ('Hold', 4, WithMeColors.peach),
+      ('Exhale', 4, WithMeColors.coral),
+      ('Still', 4, WithMeColors.pink),
+    ],
+  };
 
   int get roundSeconds =>
       phases.fold<int>(0, (total, phase) => total + phase.$2);
 }
 
-/// `image27.png` (4-7-8) and `image29.png` (box breathing).
-///
-/// `image28.png` in the document is the **old blue** info screen — a leftover
-/// "before" shot next to `image29`. It is rebuilt here in the V1 style as the
-/// instructions sheet, reachable from the info affordance.
 class BreathingScreen extends StatefulWidget {
   const BreathingScreen({
     super.key,
@@ -57,442 +63,388 @@ class BreathingScreen extends StatefulWidget {
     this.cycles = 4,
     this.sound = 'Waves',
     this.showPatternTabs,
-  });
-
+  }) : assert(cycles > 0);
   static const String route = '/breathing';
-
   final BreathPattern pattern;
   final int cycles;
   final String sound;
-
-  /// The pattern switcher. `image29.png` has it; `image27.png` does not —
-  /// 4-7-8 is reached from "Ease your sleep", which offers no alternative.
-  /// Defaults to showing it only for box breathing, as the document does.
   final bool? showPatternTabs;
-
   @override
   State<BreathingScreen> createState() => _BreathingScreenState();
 }
 
 class _BreathingScreenState extends State<BreathingScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late BreathPattern _pattern = widget.pattern;
-  late AnimationController _phase;
-
-  Timer? _ticker;
-  int _phaseIndex = 0;
-  int _round = 1;
-  int _remaining = 0;
-  bool _running = false;
+  late BreathSession _session;
+  late final Ticker _ticker;
+  final _audio = AmbientAudio();
+  Duration _lastTick = Duration.zero;
+  double _volume = .55;
+  bool _muted = false;
+  bool _audioFailed = false;
+  bool _reducedMotion = false;
 
   @override
   void initState() {
     super.initState();
-    _phase = AnimationController(vsync: this);
-    _remaining = _pattern.phases.first.$2;
+    WidgetsBinding.instance.addObserver(this);
+    _makeSession();
+    _ticker = createTicker((elapsed) {
+      final delta = elapsed - _lastTick;
+      _lastTick = elapsed;
+      _session.advance(delta);
+      if (_session.complete) {
+        _ticker.stop();
+        _syncAudio();
+      }
+    });
+  }
+
+  void _makeSession() {
+    _session = BreathSession(
+      durations: _pattern.phases.map((p) => p.$2).toList(),
+      cycles: widget.cycles,
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed && _session.running) _pause();
+  }
+
+  void _syncAudio() {
+    unawaited(
+      _audio
+          .sync(
+            sound: widget.sound,
+            playing: _session.running && !_muted,
+            volume: _volume,
+          )
+          .then((_) {
+            if (mounted && _audioFailed) setState(() => _audioFailed = false);
+          })
+          .catchError((Object _) {
+            if (mounted) setState(() => _audioFailed = true);
+          }),
+    );
+  }
+
+  void _pause() {
+    _ticker.stop();
+    _session.pause();
+    _syncAudio();
+  }
+
+  void _toggle() {
+    if (_session.running) {
+      _pause();
+      return;
+    }
+    if (_session.complete) _session.reset();
+    _lastTick = Duration.zero;
+    _session.play();
+    _ticker.start();
+    _syncAudio();
+  }
+
+  void _switchPattern(int index) {
+    _pause();
+    setState(() {
+      _session.dispose();
+      _pattern = BreathPattern.values[index];
+      _makeSession();
+    });
   }
 
   @override
   void dispose() {
-    _ticker?.cancel();
-    _phase.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _ticker.dispose();
+    _audio.dispose();
+    _session.dispose();
     super.dispose();
   }
 
-  void _toggle() {
-    if (_running) {
-      _ticker?.cancel();
-      _phase.stop();
-      setState(() => _running = false);
-      return;
-    }
-    setState(() => _running = true);
-    _startPhase();
-  }
-
-  void _startPhase() {
-    final phase = _pattern.phases[_phaseIndex];
-    setState(() => _remaining = phase.$2);
-
-    _phase
-      ..duration = Duration(seconds: phase.$2)
-      ..forward(from: 0);
-
-    _ticker?.cancel();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      if (_remaining > 1) {
-        setState(() => _remaining--);
-        return;
-      }
-      _advance();
-    });
-  }
-
-  void _advance() {
-    final last = _phaseIndex == _pattern.phases.length - 1;
-    if (!last) {
-      setState(() => _phaseIndex++);
-      _startPhase();
-      return;
-    }
-    if (_round >= widget.cycles) {
-      _ticker?.cancel();
-      setState(() {
-        _running = false;
-        _phaseIndex = 0;
-        _remaining = _pattern.phases.first.$2;
-        _round = 1;
-      });
-      return;
-    }
-    setState(() {
-      _round++;
-      _phaseIndex = 0;
-    });
-    _startPhase();
-  }
-
-  void _switchPattern(int index) {
-    _ticker?.cancel();
-    _phase.stop();
-    setState(() {
-      _pattern = BreathPattern.values[index];
-      _running = false;
-      _phaseIndex = 0;
-      _round = 1;
-      _remaining = _pattern.phases.first.$2;
-    });
-  }
+  String get _sceneName => switch (widget.sound) {
+    'Waves' => 'By the ocean',
+    'Birds' => 'A quiet morning',
+    'Forest' => 'Among the trees',
+    'Rain' => 'Under the rain',
+    'Fire' => 'Beside the fire',
+    _ => 'A moment of stillness',
+  };
+  String get _sceneDetail => switch (widget.sound) {
+    'Waves' => 'Soft tides · warm shore',
+    'Birds' => 'Birdsong · woodland nest',
+    'Forest' => 'Rustling leaves · gentle wind',
+    'Rain' => 'Falling rain · flowing water',
+    'Fire' => 'Crackling embers · evening sky',
+    _ => 'Just you and your breath',
+  };
 
   @override
   Widget build(BuildContext context) {
-    final phases = _pattern.phases;
-    final phase = phases[_phaseIndex];
-    final box = _pattern == BreathPattern.box;
-
-    return WithMeScaffold(
-      onBack: () => Navigator.of(context).pop(),
-      scrollable: false,
-      action: WithMeButton(
-        label: _running ? 'Pause' : 'Start',
-        onPressed: _toggle,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (widget.showPatternTabs ?? widget.pattern == BreathPattern.box) ...[
-            SegmentedTabs(
-              labels: [for (final p in BreathPattern.values) p.tab],
-              index: BreathPattern.values.indexOf(_pattern),
-              onChanged: _switchPattern,
-            ),
-            const SizedBox(height: WithMeSpace.lg),
-          ],
-          Text(
-            _pattern.tab,
-            textAlign: TextAlign.center,
-            style: WithMeText.title.copyWith(fontSize: 32),
+    final reduce = _reducedMotion || MediaQuery.disableAnimationsOf(context);
+    return AnimatedBuilder(
+      animation: _session,
+      builder: (context, _) {
+        final phase = _pattern.phases[_session.phaseIndex];
+        final complete = _session.complete;
+        final started = _session.started;
+        final label = complete ? 'Complete' : phase.$1;
+        final instruction = complete ? '' : '${phase.$1} ${phase.$2} seconds';
+        return WithMeScaffold(
+          // Reduced motion freezes the footage on one frame.
+          background: NatureVideo(sound: widget.sound, still: reduce),
+          title: _pattern.title,
+          onBack: () {
+            _pause();
+            Navigator.of(context).pop();
+          },
+          action: WithMeButton(
+            label: complete
+                ? 'Breathe again'
+                : _session.running
+                ? 'Pause'
+                : started
+                ? 'Resume'
+                : 'Start breathing',
+            onPressed: _toggle,
           ),
-          const SizedBox(height: WithMeSpace.xs),
-          Text(
-            _pattern.title,
-            textAlign: TextAlign.center,
-            style: WithMeText.body.copyWith(color: WithMeColors.ink),
-          ),
-          const SizedBox(height: WithMeSpace.sm),
-          Text(
-            _pattern.accent,
-            textAlign: TextAlign.center,
-            style: WithMeText.accent.copyWith(fontSize: 18),
-          ),
-          const SizedBox(height: WithMeSpace.lg),
-          // image29 runs a rail above the square with a dot travelling along
-          // it; image27 has no rail.
-          if (box)
-            AnimatedBuilder(
-              animation: _phase,
-              builder: (context, _) => _PhaseRail(
-                value: _running ? _phase.value : 0,
-              ),
-            ),
-          Expanded(
-            child: Center(
-              child: AnimatedBuilder(
-                animation: _phase,
-                builder: (context, _) => _BreathShape(
-                  square: box,
-                  label: phase.$1,
-                  seconds: _running ? _remaining : phase.$2,
-                  showCount: box,
-                  progress: _phase.value,
-                  running: _running,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: WithMeSpace.lg),
-          _PhaseChips(
-            phases: phases,
-            // Nothing is the current phase until the exercise is running,
-            // which is the state both mockups are captured in.
-            active: _running ? _phaseIndex : -1,
-            twoUp: box,
-          ),
-          if (box) ...[
-            const SizedBox(height: WithMeSpace.md),
-            Text(
-              'Round $_round of ${widget.cycles} · '
-              '${_pattern.roundSeconds} seconds a round',
-              textAlign: TextAlign.center,
-              style: WithMeText.caption,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// The rail above the box-breathing square (`image29.png`) — a dark line with
-/// a teal dot that travels along it through the phase.
-class _PhaseRail extends StatelessWidget {
-  const _PhaseRail({required this.value});
-
-  /// 0-1 through the current phase.
-  final double value;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 20,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const dot = 18.0;
-          final travel = (constraints.maxWidth - dot) * value.clamp(0, 1);
-          return Stack(
-            alignment: Alignment.centerLeft,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                height: 2.5,
-                margin: const EdgeInsets.symmetric(horizontal: dot / 2),
-                color: WithMeColors.tealInk,
-              ),
-              Padding(
-                padding: EdgeInsets.only(left: travel),
-                child: Container(
-                  width: dot,
-                  height: dot,
-                  decoration: const BoxDecoration(
-                    color: WithMeColors.teal,
-                    shape: BoxShape.circle,
-                  ),
+              if (widget.showPatternTabs ??
+                  widget.pattern == BreathPattern.box) ...[
+                SegmentedTabs(
+                  labels: [for (final p in BreathPattern.values) p.tab],
+                  index: BreathPattern.values.indexOf(_pattern),
+                  onChanged: _switchPattern,
                 ),
+                const SizedBox(height: 16),
+              ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _pattern.tab,
+                    style: WithMeText.title.copyWith(fontSize: 18),
+                  ),
+                  Text(
+                    complete
+                        ? 'Session complete'
+                        : 'Cycle ${_session.round} of ${widget.cycles}',
+                    style: WithMeText.caption,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: (MediaQuery.sizeOf(context).height * .58).clamp(
+                  300.0,
+                  520.0,
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Center(
+                      child: _BreathingPath(
+                        square: _pattern == BreathPattern.box,
+                        progress: _session.phaseProgress,
+                        phase: phase.$1,
+                        instruction: instruction,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              if (complete)
+                Text(
+                  'You made time for yourself.',
+                  textAlign: TextAlign.center,
+                  style: WithMeText.caption.copyWith(color: Colors.white),
+                ),
+              if (_audioFailed)
+                TextButton(
+                  onPressed: _syncAudio,
+                  child: const Text('Sound unavailable. Tap to retry.'),
+                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (!MediaQuery.disableAnimationsOf(context))
+                    TextButton.icon(
+                      onPressed: () =>
+                          setState(() => _reducedMotion = !_reducedMotion),
+                      icon: Icon(
+                        _reducedMotion
+                            ? Icons.motion_photos_off_rounded
+                            : Icons.motion_photos_on_rounded,
+                        size: 17,
+                      ),
+                      label: Text(
+                        _reducedMotion ? 'Motion off' : 'Motion on',
+                        style: WithMeText.caption,
+                      ),
+                    ),
+                  if (started && !complete)
+                    TextButton(
+                      onPressed: () {
+                        _pause();
+                        _session.reset();
+                      },
+                      child: Text('Restart', style: WithMeText.caption),
+                    ),
+                  if (complete)
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Done'),
+                    ),
+                ],
               ),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
 
-/// The circle (4-7-8) or rounded square (box) that grows and shrinks.
-class _BreathShape extends StatelessWidget {
-  const _BreathShape({
+class _BreathingPath extends StatelessWidget {
+  const _BreathingPath({
     required this.square,
-    required this.label,
-    required this.seconds,
-    required this.showCount,
     required this.progress,
-    required this.running,
+    required this.phase,
+    required this.instruction,
   });
 
   final bool square;
-  final String label;
-  final int seconds;
-  final bool showCount;
-
-  /// 0-1 through the current phase.
   final double progress;
-
-  final bool running;
+  final String phase;
+  final String instruction;
 
   @override
   Widget build(BuildContext context) {
-    // Grow on the inhale, shrink on the exhale, hold steady otherwise. At
-    // rest the shape sits at full size — both mockups show it that way, and
-    // starting it small made the square two thirds of its measured 205.
-    final scale = !running
-        ? 1.0
-        : switch (label) {
-            'Inhale' => 0.82 + 0.18 * progress,
-            'Exhale' => 1.0 - 0.18 * progress,
-            _ => 1.0,
-          };
-
-    // Measured off image27 and image29: the shape fills most of the content
-    // column rather than sitting small in the middle.
-    const size = 205.0;
-
     return SizedBox(
-      width: size + 20,
-      height: square ? 190 : size + 20,
-      child: Center(
-        child: AnimatedScale(
-          scale: scale,
-          duration: WithMeMotion.fast,
-          child: Container(
-            width: size,
-            height: square ? 175 : size,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              // The circle in image27 fades out at its edge; the square in
-              // image29 is a flat fill with a stroke.
-              color: square ? WithMeColors.mint.withValues(alpha: 0.42) : null,
-              gradient: square
-                  ? null
-                  // Solid most of the way out, then a short fade — image27's
-                  // circle has a defined edge, not a wash.
-                  : RadialGradient(
-                      colors: [
-                        WithMeColors.mint.withValues(alpha: 0.58),
-                        WithMeColors.mint.withValues(alpha: 0.52),
-                        WithMeColors.mint.withValues(alpha: 0.0),
-                      ],
-                      stops: const [0, 0.88, 1],
-                    ),
-              shape: square ? BoxShape.rectangle : BoxShape.circle,
-              borderRadius: square ? BorderRadius.circular(28) : null,
-              border: square
-                  ? Border.all(color: WithMeColors.mint, width: 2)
-                  : null,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: WithMeText.option.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: WithMeColors.teal,
-                  ),
-                ),
-                if (showCount)
-                  Text(
-                    '$seconds',
-                    style: WithMeText.title.copyWith(fontSize: 26),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PhaseChips extends StatelessWidget {
-  const _PhaseChips({
-    required this.phases,
-    required this.active,
-    required this.twoUp,
-  });
-
-  final List<(String, int, Color)> phases;
-  final int active;
-
-  /// Box breathing lays its four phases out two-up (`image29`); 4-7-8 stacks
-  /// its three (`image27`).
-  final bool twoUp;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget chip(int i) =>
-        _PhaseChip(phase: phases[i], active: i == active, tall: !twoUp);
-
-    if (!twoUp) {
-      return Column(
+      width: math.min(MediaQuery.sizeOf(context).width - 48, 320),
+      height: math.min(MediaQuery.sizeOf(context).height * .48, 390),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          for (var i = 0; i < phases.length; i++) ...[
-            if (i > 0) const SizedBox(height: WithMeSpace.sm),
-            chip(i),
-          ],
-        ],
-      );
-    }
-
-    return Column(
-      children: [
-        for (var row = 0; row < (phases.length / 2).ceil(); row++) ...[
-          if (row > 0) const SizedBox(height: WithMeSpace.sm),
-          Row(
-            children: [
-              for (var col = 0; col < 2; col++) ...[
-                if (col > 0) const SizedBox(width: WithMeSpace.md),
-                Expanded(
-                  child: row * 2 + col < phases.length
-                      ? chip(row * 2 + col)
-                      : const SizedBox.shrink(),
-                ),
-              ],
-            ],
+          CustomPaint(
+            painter: _PathPainter(
+              square: square,
+              progress: progress,
+              phase: phase,
+            ),
+            size: Size.infinite,
           ),
-        ],
-      ],
-    );
-  }
-}
-
-class _PhaseChip extends StatelessWidget {
-  const _PhaseChip({required this.phase, required this.active, this.tall = false});
-
-  final (String, int, Color) phase;
-  final bool active;
-
-  /// 58 on image27, where three chips stack; 53 on image29's two-up grid.
-  final bool tall;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: tall ? 58 : 53,
-      padding: const EdgeInsets.symmetric(horizontal: WithMeSpace.md),
-      decoration: BoxDecoration(
-        color: WithMeColors.cream,
-        borderRadius: BorderRadius.circular(WithMeSpace.radiusMd),
-        border: active
-            ? Border.all(color: WithMeColors.teal, width: 1.6)
-            : null,
-        boxShadow: WithMeSpace.cardShadow,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 26,
-            height: 26,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: phase.$3, shape: BoxShape.circle),
-            child: Text(
-              '${phase.$2}',
-              style: WithMeText.caption.copyWith(
-                color: WithMeColors.tealInk,
-                fontWeight: FontWeight.w700,
+          if (instruction.isNotEmpty)
+            Positioned(
+              top: 8,
+              left: 0,
+              right: 0,
+              child: Text(
+                instruction,
+                textAlign: TextAlign.center,
+                style: WithMeText.title.copyWith(
+                  color: Colors.white,
+                  fontSize: 20,
+                  shadows: const [Shadow(blurRadius: 8, color: Colors.black)],
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: WithMeSpace.md),
-          Text(phase.$1, style: WithMeText.option),
         ],
       ),
     );
   }
 }
 
-/// `image28.png`, rebuilt in the V1 style.
-///
-/// The mockup for this one is the legacy blue screen — see the "known
-/// problems" section of `docs/WITH_ME_SPEC_V1.md`.
+class _PathPainter extends CustomPainter {
+  const _PathPainter({
+    required this.square,
+    required this.progress,
+    required this.phase,
+  });
+  final bool square;
+  final double progress;
+  final String phase;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path();
+    if (square) {
+      final r = Rect.fromCenter(
+        center: size.center(Offset.zero),
+        width: size.width * .68,
+        height: size.height * .68,
+      );
+      path.addRect(r);
+    } else {
+      path
+        ..moveTo(size.width * .16, size.height * .20)
+        ..lineTo(size.width * .84, size.height * .20)
+        ..lineTo(size.width * .5, size.height * .76)
+        ..close();
+    }
+    final outline = Paint()
+      ..color = const Color(0xffd8f1e9).withValues(alpha: .92)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 7
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(path, outline);
+    final t = progress.clamp(0.0, 1.0).toDouble();
+    Offset point;
+    if (square) {
+      final r = Rect.fromCenter(
+        center: size.center(Offset.zero),
+        width: size.width * .68,
+        height: size.height * .68,
+      );
+      final bl = Offset(r.left, r.bottom), tl = Offset(r.left, r.top);
+      final tr = Offset(r.right, r.top), br = Offset(r.right, r.bottom);
+      point = switch (phase) {
+        'Inhale' => Offset.lerp(bl, tl, t)!,
+        'Hold' => Offset.lerp(tl, tr, t)!,
+        'Exhale' => Offset.lerp(tr, br, t)!,
+        _ => Offset.lerp(br, bl, t)!,
+      };
+    } else {
+      final base = Offset(size.width * .5, size.height * .76);
+      final leftTop = Offset(size.width * .16, size.height * .20);
+      final rightTop = Offset(size.width * .84, size.height * .20);
+      point = switch (phase) {
+        'Inhale' => Offset.lerp(base, leftTop, t)!,
+        'Hold' => Offset.lerp(leftTop, rightTop, t)!,
+        _ => Offset.lerp(rightTop, base, t)!,
+      };
+    }
+    canvas.drawCircle(
+      point,
+      18,
+      Paint()
+        ..color = square ? const Color(0xfff5a34d) : const Color(0xfff6e9a6)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      point,
+      18,
+      Paint()
+        ..color = Colors.white.withValues(alpha: .8)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_PathPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.square != square ||
+      oldDelegate.phase != phase;
+}
+
 class BoxBreathingInfoScreen extends StatelessWidget {
   const BoxBreathingInfoScreen({super.key});
 
