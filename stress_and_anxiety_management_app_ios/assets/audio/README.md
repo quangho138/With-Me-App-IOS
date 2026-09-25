@@ -1,3 +1,1 @@
-Nature sounds (waves, birds, forest, rain, fire): Mixkit free sound effects, one per scene. Sources in tool/media-source/README.md. Mixkit Free License: https://mixkit.co/license/ (no attribution required; do not redistribute the raw files on their own).
-
-sigh-breath.wav: built from a CC0 human breath recording. See SIGH-CREDITS.md.
+Original procedural ambient sound beds created for With Me. Stereo 24 kHz / 16-bit PCM, 32-second loops. No third-party samples or attribution obligations. Regenerate with node tool/generate_ambience.mjs. These are synthesized interpretations, not field recordings.
